@@ -318,10 +318,10 @@ class Spectrum():
     """
     Spectrum class
 
-    dataspec?
-
-    dataheader
-    dataord
+    Data attributes of the `Spectrum` class:
+    - `dataspec`: Dictionary with spectrum data (wavelength, flux, blaze...).
+    - `dataheader`: Dictionary with general parameters from the header.
+    - `dataord`: Pandas DataFrame with per order data such as the S/N.
     """
 
     def __init__(self, filin, inst, dirout='./', obj=None, tag=None, ordcut=True, saveordnoncut=False, headertable=None):
@@ -340,48 +340,28 @@ class Spectrum():
         self.dirout = dirout
         if not os.path.exists(self.dirout): os.makedirs(self.dirout)
 
-        # Read spectrum
-        dataspec = read_spectrum(self.filin, self.inst, ordcut=ordcut, saveordnoncut=saveordnoncut)
-        # Get main (array) data as attributes
-        # TODO Change and keep as dataspec dictionary?
-        self.w = dataspec['w']
-        self.f = dataspec['f']
-        self.fe = dataspec['fe']
-        self.b = dataspec['b']
-        self.m = dataspec['m']
-        self.nord = dataspec['nord']
-        self.ords = dataspec['ords']
-        self.npix = dataspec['npix']
-        self.header = dataspec['header']
-        self.w1d = dataspec['w1d']
-        self.f1d = dataspec['f1d']
-        self.fe1d = dataspec['fe1d']
-        self.b1d = dataspec['b1d']
-        self.m1d = dataspec['m1d']
+        # Read spectrum in `dataspec` attribute (dictionary)
+        self.dataspec = read_spectrum(self.filin, self.inst, ordcut=ordcut, saveordnoncut=saveordnoncut)
 
         # Add Spectrograph object
         self.Spectrograph = spectrograph.Spectrograph(self.inst, dirout=self.dirout, ordcut=ordcut)
         # Add "real" orders from Spectrograph object
         self.ords_real = self.Spectrograph.dataords['ord_real'].values
 
-        # carmnir: cut orders in two. Add extra attributes if needed
-        if (self.inst == 'carmnir') and (ordcut is True) and (saveordnoncut is True):
-            self.w_raw = dataspec['w_raw']
-            self.f_raw = dataspec['f_raw']
-            self.fe_raw = dataspec['fe_raw']
-            self.c_raw = dataspec['c_raw']
-            self.nord_raw = dataspec['nord_raw']
-            self.ords_raw = dataspec['ords_raw']
-            self.npix_raw = dataspec['npix_raw']
+        # Add general parameters from `dataspec` attribute (and remove from self.dataspec)
+        self.nord = self.dataspec.pop('nord', None)
+        self.ords = self.dataspec.pop('ords', None)
+        self.npix = self.dataspec.pop('npix', None)
+        self.header = self.dataspec.pop('header', None)
 
         # Add object from header
         if self.obj is None:
             self.obj = self.header['OBJECT']  # TODO check if same for all instruments
 
-        # Get parameters from header in `dataheader` attribute
+        # Get parameters from header in `dataheader` attribute (dictionary)
         self.dataheader = get_params_header(self.header, self.inst, headertable=headertable)
 
-        # Get S/N per order
+        # Get per order parameters in `dataord` attribute (pandas DataFrame)
         # TODO
         self.dataord = pd.DataFrame({
             'snr': get_header_snr(self.filin, self.inst, ext=0)
@@ -398,7 +378,7 @@ class Spectrum():
         return f''
     
 
-    def plot_spectrum(self, ax=None, ords=None, wmin=None, wmax=None, legend=False, legendloc=None, xunit='A', xlabel=None, ylabel='Flux', title='', lw=1, linestyle='-', alpha=1, zorder=0):
+    def plot_spectrum(self, ax=None, ords=None, x='w', wmin=None, wmax=None, legend=False, legendloc=None, xunit='A', xlabel=None, ylabel='Flux', title='', lw=1, linestyle='-', alpha=1, zorder=0):
         """Plot spectrum flux vs wavelength (or pixel), for the orders in `ords`.
         
         Parameters
@@ -414,15 +394,15 @@ class Spectrum():
         if np.issubdtype(type(ords), np.integer): ords = [ords]  # make sure it is a list
 
         # Wavelength range
-        if wmin is None: wmin = np.nanmin(self.w[ords])
-        if wmax is None: wmax = np.nanmax(self.w[ords])
-        mp = (self.w >= wmin) & (self.w <= wmax)
+        if wmin is None: wmin = np.nanmin(self.dataspec['w'][ords])
+        if wmax is None: wmax = np.nanmax(self.dataspec['w'][ords])
+        mp = (self.dataspec['w'] >= wmin) & (self.dataspec['w'] <= wmax)
         
         # Plot
         for o in ords:
             mpo = mp[o]
             if not any(mpo): continue  # skip if all pixels masked
-            ax.plot(self.w[o][mpo], self.f[o][mpo], lw=lw, linestyle=linestyle, alpha=alpha, zorder=zorder, label=f'{o}')
+            ax.plot(self.dataspec['w'][o][mpo], self.dataspec['f'][o][mpo], lw=lw, linestyle=linestyle, alpha=alpha, zorder=zorder, label=f'{o}')
         if legend: ax.legend(loc=legendloc)
         if xlabel is None: xlabel = wavelength_label(x=xunit)
         ax.set(xlabel=xlabel, ylabel=ylabel, title=title, xlim=(wmin, wmax))
@@ -465,9 +445,9 @@ class Spectrum():
         # Pixels to plot
         if pixs is None:
             pixs = np.arange(0, self.npix, 1)
-            mpixs = np.ones_like(self.f[0], dtype=bool)
+            mpixs = np.ones_like(self.dataspec['f'][0], dtype=bool)
         else:
-            mpixs = np.zeros_like(self.f[0], dtype=bool)
+            mpixs = np.zeros_like(self.dataspec['f'][0], dtype=bool)
             mpixs[pixs] = True
         extent = [pixs[0], pixs[-1], ords[0], ords[-1]]
         # Flux limits
@@ -475,7 +455,7 @@ class Spectrum():
         elif (vmin is not None) and (vmax is None): extend = 'min'
         elif (vmin is None) and (vmax is not None): extend = 'max'
         else: extend = None
-        im = ax.imshow(self.f[mords,:][:,mpixs], origin='lower', interpolation='none', aspect='auto', extent=extent, vmin=vmin, vmax=vmax, cmap=cmap, rasterized=True)
+        im = ax.imshow(self.dataspec['f'][mords,:][:,mpixs], origin='lower', interpolation='none', aspect='auto', extent=extent, vmin=vmin, vmax=vmax, cmap=cmap, rasterized=True)
         cbar = plt.colorbar(im, extend=extend, label=cblabel)
         ax.set(xlabel=xlabel, ylabel=ylabel, title=title)
         # Force y-labels to be integers
@@ -546,19 +526,13 @@ class Spectra():
         # Read files into Spectrum objects
         self.lisspec, self.lisfilin = read_spectra(self.lisfilin_initial, self.inst, returnclass=True, dirout=dirout, ordcut=ordcut, saveordnoncut=saveordnoncut, headertable=headertable)
 
+        # Get filenames
+        self.lisfilname = [spec.filname for spec in self.lisspec]
+
         # Rearrange individial data into property for all spectra
-        self.filname = np.array([spec.filname for spec in self.lisspec])
-        self.w = np.array([spec.w for spec in self.lisspec])
-        self.f = np.array([spec.f for spec in self.lisspec])
-        self.fe = np.array([spec.fe for spec in self.lisspec])
-        self.b = np.array([spec.b for spec in self.lisspec])
-        self.m = np.array([spec.m for spec in self.lisspec])
-        self.header = [spec.header for spec in self.lisspec]
-        self.w1d = np.array([spec.w1d for spec in self.lisspec])
-        self.f1d = np.array([spec.f1d for spec in self.lisspec])
-        self.fe1d = np.array([spec.fe1d for spec in self.lisspec])
-        self.b1d = np.array([spec.b1d for spec in self.lisspec])
-        self.m1d = np.array([spec.m1d for spec in self.lisspec])
+        self.dataspec = {}
+        for k in self.lisspec[0].dataspec.keys():
+            self.dataspec[k] = np.array([spec.dataspec[k] for spec in self.lisspec])
 
         # For general properties shared by all spectra, add only the value from the first spectrum
         self.nord = self.lisspec[0].nord
@@ -567,21 +541,11 @@ class Spectra():
         self.npix = self.lisspec[0].npix
         if self.obj is None: self.obj = self.lisspec[0].obj
         if self.tag is None: self.tag = self.lisspec[0].tag
-        
-        # carmnir: cut orders in two. Add extra attributes if needed
-        if (self.inst == 'carmnir') and (ordcut is True) and (saveordnoncut is True):
-            self.w_raw = np.array([spec.w_raw for spec in self.w_raw])
-            self.f_raw = np.array([spec.f_raw for spec in self.f_raw])
-            self.fe_raw = np.array([spec.fe_raw for spec in self.fe_raw])
-            self.c_raw = np.array([spec.c_raw for spec in self.c_raw])
-            self.nord_raw = np.array([spec.nord_raw for spec in self.nord_raw])
-            self.ords_raw = np.array([spec.ords_raw for spec in self.ords_raw])
-            self.npix_raw = np.array([spec.npix_raw for spec in self.npix_raw])
 
         # Get parameters from header in `dataheader` attribute
         # Transform list of dictionaries into pandas dataframe
         lisdataheader = [sp.dataheader for sp in self.lisspec]
-        self.dataheader = pd.DataFrame(lisdataheader, index=self.filname)
+        self.dataheader = pd.DataFrame(lisdataheader, index=self.lisfilname)
         del lisdataheader
 
         # Delete individual Spectrum objects to save memory
@@ -638,9 +602,9 @@ class Spectra():
         if np.issubdtype(type(ords), np.integer): ords = [ords]  # make sure it is a list
         
         # Wavelength range
-        if wmin is None: wmin = np.nanmin(self.w[lisspec][:,ords])
-        if wmax is None: wmax = np.nanmax(self.w[lisspec][:,ords])
-        mp = (self.w >= wmin) & (self.w <= wmax)
+        if wmin is None: wmin = np.nanmin(self.dataspec['w'][lisspec][:,ords])
+        if wmax is None: wmax = np.nanmax(self.dataspec['w'][lisspec][:,ords])
+        mp = (self.dataspec['w'] >= wmin) & (self.dataspec['w'] <= wmax)
 
         # if cprop is not None:
         #     if cmap is None: cmap = 'viridis'
@@ -679,7 +643,7 @@ class Spectra():
                 a = alpha0 if o % 2 == 1 else alpha1
                 linestyle = linestyle0 if o % 2 == 1 else linestyle1
                 label = f'{spec.filname}' if o == ords[0] else None
-                ax.plot(spec.w[o][mpo], spec.f[o][mpo], c=c, alpha=a, lw=lw, linestyle=linestyle, label=label,)
+                ax.plot(spec.dataspec['w'][o][mpo], spec.dataspec['f'][o][mpo], c=c, alpha=a, lw=lw, linestyle=linestyle, label=label,)
         if cbar:
             cb = plt.colorbar(mpl.cm.ScalarMappable(norm=norm, cmap=cmap), ax=ax, label=cbarlabel)
             cb.minorticks_on()
