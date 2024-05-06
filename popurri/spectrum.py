@@ -346,7 +346,7 @@ class Spectrum():
         # Add Spectrograph object
         self.Spectrograph = spectrograph.Spectrograph(self.inst, dirout=self.dirout, ordcut=ordcut)
         # Add "real" orders from Spectrograph object
-        self.ords_real = self.Spectrograph.dataords['ord_real'].values
+        self.ords_real = self.Spectrograph.dataord['ord_real'].values
 
         # Add general parameters from `dataspec` attribute (and remove from self.dataspec)
         self.nord = self.dataspec.pop('nord', None)
@@ -378,11 +378,13 @@ class Spectrum():
         return f''
     
 
-    def plot_spectrum(self, ax=None, ords=None, x='w', wmin=None, wmax=None, legend=False, legendloc=None, xunit='A', xlabel=None, ylabel='Flux', title='', lw=1, linestyle='-', alpha=1, zorder=0):
+    def plot_spectrum(self, ax=None, ords=None, x='w', y='f', wmin=None, wmax=None, legend=False, legendloc=None, xunit='A', xlabel=None, ylabel='Flux', title='', lw=1, linestyle='-', alpha=1, zorder=0):
         """Plot spectrum flux vs wavelength (or pixel), for the orders in `ords`.
         
         Parameters
         ----------
+        x, y : str
+            Parameters to plot from `Spectrum.dataspec`. Default to 'w' and 'f'.
         ords: list-like, optional
             Orders to plot. If None, plot all orders.
         wmin, wmax: floats, optional
@@ -394,17 +396,17 @@ class Spectrum():
         if np.issubdtype(type(ords), np.integer): ords = [ords]  # make sure it is a list
 
         # Wavelength range
-        if wmin is None: wmin = np.nanmin(self.dataspec['w'][ords])
-        if wmax is None: wmax = np.nanmax(self.dataspec['w'][ords])
-        mp = (self.dataspec['w'] >= wmin) & (self.dataspec['w'] <= wmax)
+        if wmin is None: wmin = np.nanmin(self.dataspec[x][ords])
+        if wmax is None: wmax = np.nanmax(self.dataspec[x][ords])
+        mp = (self.dataspec[x] >= wmin) & (self.dataspec[x] <= wmax)
         
         # Plot
         for o in ords:
             mpo = mp[o]
             if not any(mpo): continue  # skip if all pixels masked
-            ax.plot(self.dataspec['w'][o][mpo], self.dataspec['f'][o][mpo], lw=lw, linestyle=linestyle, alpha=alpha, zorder=zorder, label=f'{o}')
+            ax.plot(self.dataspec[x][o][mpo], self.dataspec[y][o][mpo], lw=lw, linestyle=linestyle, alpha=alpha, zorder=zorder, label=f'{o}')
         if legend: ax.legend(loc=legendloc)
-        if xlabel is None: xlabel = wavelength_label(x=xunit)
+        if xlabel is None: xlabel = wavelength_label(x=xunit)  # Assumes plotting wavelength in x-axis
         ax.set(xlabel=xlabel, ylabel=ylabel, title=title, xlim=(wmin, wmax))
         ax.minorticks_on()
         return ax
@@ -476,9 +478,47 @@ class Spectrum():
         return
 
 
-    def plot_dataords(y, z=None):
-        pass
-        # TODO!
+    def plot_dataord(self, y, ax=None, x=None, z=None, xlabel=None, ylabel=None, zlabel=None, title='', zorder=0, s=100, edgecolors='k', linewidths=0.5, ecolor=None, elinewidth=1.5, capsize=3, markeredgewidth=1.5, **kwargs):
+        """
+        kwargs for scatter plot (not errorbar)
+        """
+        if ax is None: ax = plt.gca()
+        if x is None: x = self.ords
+        zlabel = z if zlabel is None else zlabel
+        dataz = self.dataord[z] if z is not None else None
+        # Plot scatter
+        sc = ax.scatter(x, self.dataord[y], c=dataz, zorder=0, s=s, edgecolors=edgecolors, linewidths=linewidths, **kwargs)
+        # Error bars
+        # self.dataord[y+'_err'] = np.ones(len(self.dataord[y])) * 5  # TESTING
+        if self.dataord[y+'_err'] is not None:
+            if ecolor is None: ecolor = mpl.colors.to_rgba('0.5', 0.8)
+            ax.errorbar(x, self.dataord[y], yerr=self.dataord[y+'_err'], fmt='none', ecolor=ecolor, elinewidth=elinewidth, capsize=capsize, markeredgewidth=markeredgewidth, zorder=zorder-1)
+        # Colorbar
+        if z is not None:
+            cbar = plt.colorbar(sc, ax=ax, label=zlabel)
+            cbar.minorticks_on()
+        # Style
+        if xlabel is None: xlabel = 'Order'
+        if ylabel is None: ylabel = y
+        ax.set(xlabel=xlabel, ylabel=ylabel, title=title)
+        ax.minorticks_on()
+        # Force x-labels to be integers
+        ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+        return ax
+
+
+    def fig_dataord(self, y, filout=None, sh=False, sv=True, figsize=(8, 6), **kwargs):
+        """
+        """
+        fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
+        # ax = self.plot_dataord(y, ax=ax, **kwargs)
+        ax = self.plot_dataord(y, ax=ax, **kwargs)
+        if sh: plt.show()
+        if sv:
+            if filout is None: filout = f'{self.dirout}/{self.filname}_ord_{y}.pdf'
+            fig.savefig(filout)
+        plt.close()
+        return
 
 
 class Spectra():
