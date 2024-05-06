@@ -1,0 +1,20 @@
+inst,R,spectral_sampling_px,pixel_ms,wmin_nm,wmax_nm,ndet,ndet_raw,nord,ord_ref,nslice,nslice_raw,npix,ron,conversion_e_adu,position,type,inst_nice,inst_acronym_nice,tel,tel_nice,tel_acronym_nice,tel_diameter,observatory,observatory_nice,observatory_acronym_nice,year_start,year_end,ref,notes
+carmvis,94600,2.5,1258,520,960,,,61,36,1,2,4096,,,,fiber,,CARMENES VIS,,,,3.6,caha,,CAHA,2016,,,
+carmnir,80400,2.8,1356,960,1710,,,28,,1,2,,,,,fiber,,CARMENES NIR,,,,3.6,caha,,CAHA,2016,,,
+crires,,,,,,,,,,,,,,,,slit,CRyogenic high-resolution InfraRed cross dispersed Echelle Spectrograph,CRIRES,,,,,,,,,,,
+criresplus,"[43000, 92000]",,,950,5300,3,3,,,,,,,,,slit,CRyogenic high-resolution InfraRed cross dispersed Echelle Spectrograph upgrade,CRIRES+,vlt,Very Large Telescope,VLT,8.2,paranal,Paranal,Paranal,,,,Number of orders and resolution depend on specific mode (slit and grating) used
+espresso,"[70000,190000]",,,,,1,2,,,2,2,,,,coude,fiber,Echelle SPectrograph for Rocky Exoplanets and Stable Spectroscopic Observations,ESPRESSO,vlt,Very Large Telescope,VLT,8.2,paranal,Paranal,Paranal,2017,,pepe_et_al_2021,"General ESPRESSO key, mean of all modes"
+espresso_uhr11,190000,2.5,,,,1,2,,,2,2,,"[5,8]","[1.15,1.1]",coude,fiber,Echelle SPectrograph for Rocky Exoplanets and Stable Spectroscopic Observations,ESPRESSO UHR,vlt,Very Large Telescope,VLT,8.2,paranal,Paranal,Paranal,2017,,pepe_et_al_2021,
+espresso_hr11,138000,4.5,,,,1,2,,,2,2,,"[5,8]","[1.15,1.1]",coude,fiber,Echelle SPectrograph for Rocky Exoplanets and Stable Spectroscopic Observations,ESPRESSO HR 1x1,vlt,Very Large Telescope,VLT,8.2,paranal,Paranal,Paranal,2017,,pepe_et_al_2021,
+espresso_hr21,138000,4.5,,,,1,2,,,2,2,,"[2,3]","[1,13,1.09]",coude,fiber,Echelle SPectrograph for Rocky Exoplanets and Stable Spectroscopic Observations,ESPRESSO HR 2x1,vlt,Very Large Telescope,VLT,8.2,paranal,Paranal,Paranal,2017,,pepe_et_al_2021,
+espresso_hr42,130000,2.25,,,,1,2,,,2,2,,"[2,4]","[1,13,1.09]",coude,fiber,Echelle SPectrograph for Rocky Exoplanets and Stable Spectroscopic Observations,ESPRESSO HR 4x2,vlt,Very Large Telescope,VLT,8.2,paranal,Paranal,Paranal,2017,,pepe_et_al_2021,
+espresso_mr42,72500,5,,,,1,2,,,2,2,,"[2,4]","[1,13,1.09]",coude,fiber,Echelle SPectrograph for Rocky Exoplanets and Stable Spectroscopic Observations,ESPRESSO MR 4x2,vlt,Very Large Telescope,VLT,16,paranal,Paranal,Paranal,2017,,pepe_et_al_2021,
+espresso_mr84,70000,2.5,,,,1,2,,,2,2,,"[2,5]","[1,13,1.09]",coude,fiber,Echelle SPectrograph for Rocky Exoplanets and Stable Spectroscopic Observations,ESPRESSO MR 8x4,vlt,Very Large Telescope,VLT,16,paranal,Paranal,Paranal,2017,,pepe_et_al_2021,
+expres,,3.6,,,,,,86,,,,,,,,fiber,,EXPRESS,,,,,,,,,,,
+harps,115000,3.2,820,380,690,,,72,55,,,,,,,fiber,,HARPS,,,,,lasilla,La Silla,La Silla,2003,,mayor_et_al_2003,
+harpsn,115000,3.2,820,,,,,69,,,,,,,,fiber,,HARPS-N,,,,,,,,2012,,,
+igrins,45000,,,1450,2450,,,,,,,,,,,slit,,IGRINS,,,,,,,,,,,
+maroonx,"[82000,88000]",,,500,920,,,,,3,3,,,,,fiber,,MAROON-X,,Gemini North,,,,,,2020,,,
+neid,,,,380,930,,,,,,,,,,,fiber,,NEID,,,,,,,,,,,
+nirps,,,,,,,,,,,,,,,,fiber,,NIRPS,,,,,lasilla,La Silla,La Silla,,,,
+spirou,,,,,,,,,,,,,,,,fiber,,SPIRou,,,,,,,,,,,
