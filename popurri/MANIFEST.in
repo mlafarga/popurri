@@ -1,0 +1,14 @@
+# Exclude specific files
+# All files which are tracked by git and not explicitly excluded here are included by setuptools_scm
+prune build
+prune docs/_build
+prune docs/api
+global-exclude *.pyc *.o
+prune .github
+exclude .mailmap
+exclude .gitignore
+exclude .gitattributes
+exclude *.yml
+exclude *.yaml
+
+
