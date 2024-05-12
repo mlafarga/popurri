@@ -31,6 +31,7 @@ popurri/version.py
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
 *.spec
+popurri/_version.py
 
 # Installer logs
 pip-log.txt

@@ -10,5 +10,3 @@ exclude .gitignore
 exclude .gitattributes
 exclude *.yml
 exclude *.yaml
-
-
