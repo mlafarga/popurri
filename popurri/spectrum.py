@@ -18,7 +18,7 @@ from .plotutils import wavelength_label
 from . import spectrograph as spectrograph
 
 dirhere = os.path.dirname(__file__)
-dirdata = os.path.join(dirhere, '../data/')
+dirdata = os.path.join(dirhere, './data/')
 
 
 ###############################################################################

@@ -24,13 +24,11 @@ requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
 build-backend = 'setuptools.build_meta'
 
 [tool.setuptools]
-zip_safe = false
-include_package_data = true
 
 [tool.setuptools.packages.find]
 
 
 [tool.setuptools_scm]
-write_to = "popurri/version.py"
+write_to = "popurri/_version.py"
 
 
