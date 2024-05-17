@@ -36,6 +36,7 @@ extensions = [
     'sphinx.ext.autodoc',  # include documentation from docstrings
     'sphinx.ext.autosummary',  # generate autodoc summaries
     'sphinx.ext.intersphinx',  # link to other projects' documentation
+    'sphinx_rtd_theme',  # readthedocs theme
 ]
 
 intersphinx_mapping = {
