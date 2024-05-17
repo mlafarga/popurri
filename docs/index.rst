@@ -6,14 +6,21 @@
 Welcome to popurri's documentation!
 ===================================
 
+.. note::
+
+   This project is under development.
+
+
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
 
+   usage
+   api
 
 
 Indices and tables
-==================
+------------------
 
 * :ref:`genindex`
 * :ref:`modindex`
