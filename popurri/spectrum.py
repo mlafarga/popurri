@@ -24,6 +24,8 @@ dirdata = os.path.join(dirhere, './data/')
 ###############################################################################
 
 
+# CARMENES
+
 def read_spec_carmvis(filin):
     """
     Read CARACAL ouput.
@@ -39,6 +41,7 @@ def read_spec_carmvis(filin):
     dataspec['nord'] = len(dataspec['w'])
     dataspec['ords'] = np.arange(0, dataspec['nord'], 1)
     dataspec['npix'] = len(dataspec['w'][0])
+    dataspec['pix'] = np.array([np.arange(0, dataspec['npix'], 1)] * len(dataspec['ords']))
     return dataspec
 
 
@@ -74,15 +77,24 @@ def read_spec_carmnir(filin, ordcut=True, saveordnoncut=False):
     return dataspec
 
 
+# =============================================================================
+
+# CRIRES
+
 def read_spec_crires(filin):
     pass
     return
 
+# =============================================================================
 
 def read_spec_criresplus(filin):
     pass
     return
 
+
+# =============================================================================
+
+# ESPRESSO
 
 def read_spec_espresso(filin):
     pass
@@ -110,30 +122,157 @@ def read_spec_espresso_uhr(filin):
     return
 
 
+# =============================================================================
+
+# EXPRES
+
 def read_spec_expres(filin):
     pass
     return
 
 
-def read_spec_harps(filin):
-    pass
-    return
+# =============================================================================
+
+# HARPS
+
+def wpolycoeff(filin, kwinst='HIERARCH ESO', nord=72):
+    """From e2ds header FITS file get the polynomial coefficients necessary to transform from pixels to wavelength.
+
+    Parameters
+    ----------
+    filin : str or astropy header object (astropy.io.fits.header.Header)
+        FITS file from which to read the header or astropy header object (faster if header already loaded before).
+    """
+
+    # Read header
+    if isinstance(filin, str):
+        with fits.open(filin) as hdulist:
+            dataspec['header'] = hdulist[0].header
+    elif isinstance(filin, fits.header.Header):
+        header = filin
+
+    ords = np.arange(0, nord, 1)
+
+    # Get polynomial coefficients (4 per order) from header
+    #  Polynomial coefficient numbers, 4 per order
+    polydeg = header[f'{kwinst} DRS CAL TH DEG LL']
+    coeffnum = [np.arange(0+o*(polydeg+1), (polydeg+1)+o*(polydeg+1), 1) for o in ords]
+    #  Polynomial coefficient values, 4 per order
+    coeff = [[header[kwinst + 'DRS CAL TH COEFF LL{:d}'.format(j)] for j in coeffnum[o]] for o in ords]
+
+    return coeff
 
 
-def read_spec_harpsn(filin):
-    pass
-    return
+def pix2wave(x, coeff):
+    """Convert pixel to wavelength using the coefficients from the e2ds header, for a single echelle order.
 
+    Parameters
+    ----------
+    x : 1d array
+        Pixels.
+    """
+    w = coeff[0] + coeff[1] * x + coeff[2] * x**2 + coeff[3] * x**3
+    return w
+
+
+def pix2wave_echelle(x, coeff):
+    nord = len(coeff)
+    ords = np.arange(0, nord, 1)
+    w = np.array([pix2wave(x, coeff[o]) for o in ords])
+    return w
+
+
+
+def read_spec_harps(filin, kwinst='HIERARCH ESO', nord=72, readblaze=True, dirblaze=None, filblaze=None):
+    """
+    Read e2ds reduced spectrum flux and wavelength, and optionally the blaze.
+
+    The wavelength data is obtained from the header keywords in `filin` using `pix2wave_echelle`, `pix2wave`, and `wpolycoeff`.
+
+    The blaze is only read if `readblaze` is True (default).
+    The directory containing the blaze files by default is the same as the directory where the e2ds file is (`filin`), but can be changed with `dirblaze`.
+    The blaze file by default is obtained from the header of the e2ds file `filin`: 'HIERARCH TNG DRS BLAZE FILE', but can be changed with `filblaze`.
+
+    Parameters
+    ----------
+    filin : str
+        Reduced e2ds file.
+    readblaze : bool, default True
+        Whether to read the blaze or not. If False, the returned blaze `b` is an array full of ones of the same shape as the spectrum.
+    dirblaze : str, default None
+        Directory where the blaze file is. If None (default), it is assumed that it is in the same directory as the spectrum `filin`.
+    filblaze : str, default None
+        Blaze file. Use if want to obtain the blaze from a file different than the one specified in the header keyword 'HIERARCH ESO DRS BLAZE FILE'.
+    """
+    dataspec = {}
+
+    # Flux
+    with fits.open(filin) as hdulist:
+        dataspec['header'] = hdulist[0].header
+        dataspec['f'] = hdulist[0].data
+
+    # Wavelength
+    # nord = len(dataspec['f'])
+    npix = len(dataspec['f'][0])
+    pix = np.arange(0, npix, 1)
+    coeff = wpolycoeff(dataspec['header'], kwinst=kwinst, nord=nord)
+    dataspec['w'] = pix2wave_echelle(x, coeff)
+
+    # Blaze function
+    if readblaze:
+        # If no blaze directory specified, assume is the same as the data file
+        if dirblaze is None: dirblaze = os.path.dirname(filin)
+        # If no blaze file specified, get the corresponding one from the ehader
+        if filblaze is None: filblaze = dataspec['header'][f'{kwinst} DRS BLAZE FILE']
+        with fits.open(os.path.join(dirblaze, filblaze)) as hdulist:
+            dataspec['b'] = hdulist[0].data
+    else:
+        dataspec['b'] = np.ones_like(dataspec['f'])        
+
+    dataspec['nord'] = nord
+    dataspec['ords'] = np.arange(0, dataspec['nord'], 1)
+    dataspec['npix'] = npix
+    dataspec['pix'] = np.array([np.arange(0, dataspec['npix'], 1)] * len(dataspec['ords']))
+    return dataspec
+
+
+# HARPS-N
+
+def read_spec_harpsn(filin, kwinst='HIERARCH TNG', nord=69, readblaze=True, dirblaze=None, filblaze=None):
+    """
+    Read HARPS-N e2ds reduced spectrum flux and wavelength, and optionally the blaze.
+    """
+    dataspec = read_spec_harps(filin, kwinst=kwinst, nord=nord, readblaze=readblaze, dirblaze=dirblaze, filblaze=filblaze)
+    return dataspec
+
+
+# =============================================================================
+
+# MAROON-X
 
 def read_spec_maroonx(filin):
     pass
     return
 
 
+
+# =============================================================================
+
+# NEID
+
 def read_spec_neid(filin):
     pass
     return
 
+
+# dict_read_spectrum = {}
+# def register_inst_read_spectrum(func):
+#     """Decorator to register a function to read a spectrum for a specific instrument with the general function `read_spectrum`."""
+#     dict_read_spectrum[func.__name__] = func
+#     return func
+
+
+# =============================================================================
 
 def read_spectrum(filin, inst, **kwargs):
     """
@@ -175,7 +314,7 @@ def read_spectrum(filin, inst, **kwargs):
     - 'm1d': Mask array of the coadded 1D spectrum
     # TODO Change/generalise as more instruments are added
     """
-    dictinst = {
+    dict_read_spectrum = {
         'carmvis': read_spec_carmvis,
         'carmnir': read_spec_carmnir,
         'crires': read_spec_crires,
@@ -188,7 +327,7 @@ def read_spectrum(filin, inst, **kwargs):
         'maroonx': read_spec_maroonx,
         'neid': read_spec_neid,
     }
-    liskey = ['w', 'f', 'fe', 'b', 'm', 'nord', 'ords', 'npix', 'header', 'w1d', 'f1d', 'fe1d', 'b1d', 'm1d']
+    liskey = ['w', 'f', 'fe', 'b', 'c', 'm', 'pix', 'nord', 'ords', 'npix', 'header', 'w1d', 'f1d', 'fe1d', 'b1d', 'm1d']
 
     # Check if file exists
     if not Path(filin).is_file(): sys.exit(f'File {filin} not found')
@@ -197,9 +336,14 @@ def read_spectrum(filin, inst, **kwargs):
     if inst != 'carmnir':
         kwargs.pop('ordcut')
         kwargs.pop('saveordnoncut')
+    if (inst != 'harps') and (inst != 'harpsn'):
+        kwargs.pop('readblaze')
+        kwargs.pop('dirblaze')
+        kwargs.pop('filblaze')
 
     # Read
-    dataspec = dictinst[inst](filin, **kwargs)
+    dataspec = dict_read_spectrum[inst](filin, **kwargs)
+
     # Fill in missing keys
     for key in liskey:
         if key not in dataspec:
@@ -227,16 +371,9 @@ def read_spectra(lisfilin, inst, returnclass=False, dirout='./', **kwargs):
                 lisdataspec.append(Spectrum(filin, inst, dirout, **kwargs))
             else:
                 lisdataspec.append(read_spectrum(filin, inst, **kwargs))
-        except:
-            print(f'Error reading {filin}')
+        except FileNotFoundError:
+            print(f'File {filin} not found, removing from list')
             m[i] = False
-        # # TESTING
-        # if returnclass:
-        #     print(f'Reading {filin}')
-        #     lisdataspec.append(Spectrum(filin, inst, dirout, **kwargs))
-        # else:
-        #     lisdataspec.append(read_spectrum(filin, inst, **kwargs))
-
     lisfilin = np.array(lisfilin)[m]
     return lisdataspec, lisfilin
 
@@ -250,12 +387,21 @@ def read_header(filin, ext=0):
     return header
 
 
-def read_header_kw_table():
+def read_header_kw_table(verbose=False):
     """
-    Read table with parameters keyword in this code and FITS header keywords from file 'header_kws.csv' in directory `dirdata`.
+    Read table that contains general parameters keywords used in this code and their corresponding FITS header keyword for different instruments. The table is in file 'header_kws.csv' in directory `dirdata`.
+
+    Short example of the table structure:
+    ```
+    |Param   |carmvis              |harps                |
+    |--------|---------------------|---------------------|
+    |airmass |AIRMASS              |AIRMASS              |
+    |berv    |HIERARCH CARACAL BERV|HIERARCH ESO DRS BERV|
+    ```
     """
     filtable = os.path.join(dirdata, 'spectrograph/header_kws.csv')
     df = pd.read_csv(filtable, comment='#').set_index('param')
+    if verbose: print('General parameters from FITS header:', df.index)
     return df
 
 
@@ -263,18 +409,20 @@ def get_params_header(filin, inst, headertable=None, ext=0):
     """
     Get general common parameters from header.
 
-    Table with parameters keyword in this code and FITS header keywords in file 'header_kws.csv' in directory `dirdata`.
+    The general parameters are taken from the table 'header_kws.csv' in directory `dirdata`, read with `read_header_kw_table`.
 
     filin : str or astropy header object (astropy.io.fits.header.Header)
         FITS file from which to read the header or astropy header object (faster if header already loaded before). If it is a header object, the parameter `ext` is not used.
+    headertable : pandas DataFrame, optional
+        Table previously read with `read_header_kw_table`. If None, it is read now.
     """
-    # Read header
-    if isinstance(filin, str): header = read_header(filin, ext=ext)
-    elif isinstance(filin, fits.header.Header): header = filin
-
     # Get reference table
     if headertable is None: headertable = read_header_kw_table()
     headertable = headertable[inst]
+
+    # Read header
+    if isinstance(filin, str): header = read_header(filin, ext=ext)
+    elif isinstance(filin, fits.header.Header): header = filin
 
     # Get keyword values
     data = {}
@@ -288,6 +436,7 @@ def get_params_header(filin, inst, headertable=None, ext=0):
 
 def get_header_snr(filin, inst, ext=0):
     """
+    Keywords are the order number (starting at 0 for the bluest order).
     """
     # Read header
     if isinstance(filin, str): header = read_header(filin, ext=ext)
@@ -297,6 +446,8 @@ def get_header_snr(filin, inst, ext=0):
     dictpattern = {
         'carmvis': '*CARACAL FOX SNR*',
         'carmnir': '*CARACAL FOX SNR*',
+        'harps': '*ESO DRS SPE EXT SN*',
+        'harpsN': '*TNG DRS SPE EXT SN*',
         # TODO add all instruments
         # TODO carmnir SNR 55 (ordcut) orders, not clear which is which
     }
@@ -324,13 +475,29 @@ class Spectrum():
     - `dataord`: Pandas DataFrame with per order data such as the S/N.
     """
 
-    def __init__(self, filin, inst, dirout='./', obj=None, tag=None, ordcut=True, saveordnoncut=False, headertable=None):
+    def __init__(self, filin, inst, dirout='./', obj=None, tag=None, headertable=None,
+    # carmnir parameters
+    ordcut=True, saveordnoncut=False,
+    # harps and harpsn parameters
+    readblaze=True, dirblaze=None, filblaze=None,
+    ):
         """
 
+        dataspec
+        header
+        dataheader
+        dataords
+        
+        carmnir parameters
+        ------------------
         ordcut : bool
-            carmnir
         saveordnoncut : bool
-            carmnir
+        
+        harps and harpsn parameters
+        ---------------------------
+        readblaze
+        dirblaze
+        filblaze
         """
         self.filin = filin
         self.filname = os.path.basename(os.path.splitext(filin)[0])
@@ -341,7 +508,7 @@ class Spectrum():
         if not os.path.exists(self.dirout): os.makedirs(self.dirout)
 
         # Read spectrum in `dataspec` attribute (dictionary)
-        self.dataspec = read_spectrum(self.filin, self.inst, ordcut=ordcut, saveordnoncut=saveordnoncut)
+        self.dataspec = read_spectrum(self.filin, self.inst, ordcut=ordcut, saveordnoncut=saveordnoncut, readblaze=readblaze, dirblaze=dirblaze, filblaze=filblaze)
 
         # Add Spectrograph object
         self.Spectrograph = spectrograph.Spectrograph(self.inst, dirout=self.dirout, ordcut=ordcut)
@@ -367,6 +534,11 @@ class Spectrum():
             'snr': get_header_snr(self.filin, self.inst, ext=0)
         })
 
+        # Add per order parameters from `dataord` to `dataheader`. Keywords will be '{parameter}o{ord}' where parameter is the column in `dataord` (e.g. 'snr') and ord is the order number.
+        for col in self.dataord.columns:
+            for o in self.dataord.index:
+                self.dataheader[f'{col}o{o}'] = self.dataord.loc[o, col]
+
 
 
     # def __repr__(self):
@@ -378,7 +550,7 @@ class Spectrum():
         return f''
     
 
-    def plot_spectrum(self, ax=None, ords=None, x='w', y='f', wmin=None, wmax=None, legend=False, legendloc=None, xunit='A', xlabel=None, ylabel='Flux', title='', lw=1, linestyle='-', alpha=1, zorder=0):
+    def plot_spectrum(self, ax=None, ords=None, x='w', y='f', wmin=None, wmax=None, normflux=None, offset=0, legend=False, legendloc=None, xunit='A', xlabel=None, ylabel='Flux', title='', lw=1, linestyle='-', alpha=1, alphaother=0.7, zorder=0, color=None, colorother=None, cmap=None, cbar=False):
         """Plot spectrum flux vs wavelength (or pixel), for the orders in `ords`.
         
         Parameters
@@ -389,7 +561,16 @@ class Spectrum():
             Orders to plot. If None, plot all orders.
         wmin, wmax: floats, optional
             Wavelength range to plot. Must be in the same units as `w` (and `xunit`).
-        TODO Add support for color from colormap
+
+        normflux : function
+            Function to normalise the spectrum. Default is None. max, mean...
+        offset : float
+            Offset to add to the spectrum. To ne used with `normflux` and pixel in the x axis. Default is None.
+        c : str, optional
+            Plot all orders with the same color, alternating alpha. Overrides `cmap`.
+        cmap : str, optional
+        cbar : bool, optional
+        TODO add colorbar if using cmap
         """
         if ax is None: ax = plt.gca()
         if ords is None: ords = self.ords
@@ -399,12 +580,40 @@ class Spectrum():
         if wmin is None: wmin = np.nanmin(self.dataspec[x][ords])
         if wmax is None: wmax = np.nanmax(self.dataspec[x][ords])
         mp = (self.dataspec[x] >= wmin) & (self.dataspec[x] <= wmax)
+
+        # Normalisation and offset
+        if normflux is not None:
+            yp = np.array([self.dataspec[y][o] / normflux(self.dataspec[y][o]) + offset*i for i, o in enumerate(self.ords)])
+            print(yp.shape, self.dataspec[y].shape)
+        else:
+            yp = self.dataspec[y]
+
+        # Colors
+        if (cmap is not None) and (color is None):  # use cmap
+            cmap = mpl.colormaps.get_cmap(cmap)
+            norm = mpl.colors.Normalize(vmin=ords[0], vmax=ords[-1])
+        elif (cmap is None) and (color is None):  # use default color cycle
+            lencol = len(plt.rcParams['axes.prop_cycle'].by_key()['color'])
         
+        a = alpha
         # Plot
         for o in ords:
             mpo = mp[o]
             if not any(mpo): continue  # skip if all pixels masked
-            ax.plot(self.dataspec[x][o][mpo], self.dataspec[y][o][mpo], lw=lw, linestyle=linestyle, alpha=alpha, zorder=zorder, label=f'{o}')
+
+            # Color and alpha
+            if (cmap is not None) and (color is None):
+                c = cmap(norm(o))
+            elif (cmap is None) and (color is None):
+                c = plt.rcParams['axes.prop_cycle'].by_key()['color'][o%lencol]
+            elif (color is not None) and (colorother is None):
+                c = color
+                a = alpha if o % 2 == 0 else alphaother
+            elif (color is not None) and (colorother is not None):
+                c = color if o % 2 == 0 else colorother
+                a = alpha if o % 2 == 0 else alphaother
+            
+            ax.plot(self.dataspec[x][o][mpo], yp[o][mpo], c=c, alpha=a, lw=lw, linestyle=linestyle, zorder=zorder, label=f'{o}')
         if legend: ax.legend(loc=legendloc)
         if xlabel is None: xlabel = wavelength_label(x=xunit)  # Assumes plotting wavelength in x-axis
         ax.set(xlabel=xlabel, ylabel=ylabel, title=title, xlim=(wmin, wmax))
@@ -420,6 +629,80 @@ class Spectrum():
         if sh: plt.show()
         if sv:
             if filout is None: filout = f'{self.dirout}/{self.filname}_spec.pdf'
+            fig.savefig(filout)
+        plt.close()
+        return
+    
+
+    def plot_spectrum_pix(self, ax=None, ords=None, x='pix', y='f', pmin=None, pmax=None, normflux=np.nanmax, offset=1, legend=False, legendloc=None, xunit=None, xlabel='Pixel', ylabel='Flux', title='', lw=1, linestyle='-', alpha=1, zorder=0, color=None, cmap=None, cbar=False):
+        """Plot spectrum normalised flux + offset vs pixel for the orders in `ords`.
+        
+        Parameters
+        ----------
+        x, y : str
+            Parameters to plot from `Spectrum.dataspec`. Default to 'w' and 'f'.
+        ords: list-like, optional
+            Orders to plot. If None, plot all orders.
+        wmin, wmax: floats, optional
+            Wavelength range to plot. Must be in the same units as `w` (and `xunit`).
+
+        normflux : function
+            Function to normalise the spectrum. Default is None. max, mean...
+        offset : float
+            Offset to add to the spectrum. To ne used with `normflux` and pixel in the x axis. Default is None.
+        c : str, optional
+            Plot all orders with the same color, alternating alpha. Overrides `cmap`.
+        cmap : str, optional
+        cbar : bool, optional
+        TODO add colorbar if using cmap
+        """
+        if ax is None: ax = plt.gca()
+        if ords is None: ords = self.ords
+        if np.issubdtype(type(ords), np.integer): ords = [ords]  # make sure it is a list
+
+        # Wavelength range
+        if pmin is None: pmin = np.nanmin(self.dataspec[x][ords])
+        if pmax is None: pmax = np.nanmax(self.dataspec[x][ords])
+        mp = (self.dataspec[x] >= pmin) & (self.dataspec[x] <= pmax)
+
+        # Normalisation and offset
+        if normflux is not None:
+            yp = np.array([self.dataspec[y][o] / normflux(self.dataspec[y][o]) + offset*i for i, o in enumerate(self.ords)])
+            print(yp.shape, self.dataspec[y].shape)
+        else:
+            yp = self.dataspec[y]
+
+        # Colors
+        if (cmap is not None) and (color is None):  # use cmap
+            cmap = mpl.colormaps.get_cmap(cmap)
+            norm = mpl.colors.Normalize(vmin=ords[0], vmax=ords[-1])
+        elif (cmap is None) and (color is None):  # use default color cycle
+            lencol = len(plt.rcParams['axes.prop_cycle'].by_key()['color'])
+        
+        a = alpha
+        # Plot
+        for o in ords:
+            mpo = mp[o]
+            if not any(mpo): continue  # skip if all pixels masked
+
+            # Color and alpha
+            if (cmap is not None) and (color is None):
+                c = cmap(norm(o))
+            elif (cmap is None) and (color is None):
+                c = plt.rcParams['axes.prop_cycle'].by_key()['color'][o%lencol]
+            ax.plot(self.dataspec[x][o][mpo], yp[o][mpo], c=c, alpha=a, lw=lw, linestyle=linestyle, zorder=zorder, label=f'{o}')
+        if legend: ax.legend(loc=legendloc)
+        ax.set(xlabel=xlabel, ylabel=ylabel, title=title, xlim=(pmin, pmax))
+        ax.minorticks_on()
+        return ax
+    
+
+    def fig_spectrum_pix(self, filout=None, sh=False, sv=True, figsize=(16, 16), **kwargs):
+        fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
+        ax = self.plot_spectrum_pix(ax=ax, **kwargs)
+        if sh: plt.show()
+        if sv:
+            if filout is None: filout = f'{self.dirout}/{self.filname}_spec_pix.pdf'
             fig.savefig(filout)
         plt.close()
         return
@@ -478,21 +761,27 @@ class Spectrum():
         return
 
 
-    def plot_dataord(self, y, ax=None, x=None, z=None, xlabel=None, ylabel=None, zlabel=None, title='', zorder=0, s=100, edgecolors='k', linewidths=0.5, ecolor=None, elinewidth=1.5, capsize=3, markeredgewidth=1.5, **kwargs):
+    def plot_dataord(self, y, ax=None, x=None, z=None, ords=None, xlabel=None, ylabel=None, zlabel=None, title='', zorder=0, s=100, edgecolors='k', linewidths=0.5, ecolor=None, elinewidth=1.5, capsize=3, markeredgewidth=1.5, **kwargs):
         """
         kwargs for scatter plot (not errorbar)
+        cmap in kwargs
         """
         if ax is None: ax = plt.gca()
         if x is None: x = self.ords
+        if ords is None:
+            m = np.ones_like(self.ords, dtype=bool)
+        else:
+            m = np.zeros_like(self.ords, dtype=bool)
+            m[ords] = True
         zlabel = z if zlabel is None else zlabel
-        dataz = self.dataord[z] if z is not None else None
+        dataz = self.dataord[z] if z is not None else None  # TODO Revise this, might fail if is None, or if z is not in dataord
         # Plot scatter
-        sc = ax.scatter(x, self.dataord[y], c=dataz, zorder=0, s=s, edgecolors=edgecolors, linewidths=linewidths, **kwargs)
+        sc = ax.scatter(x[m], self.dataord[y][m], c=dataz[m], zorder=0, s=s, edgecolors=edgecolors, linewidths=linewidths, **kwargs)
         # Error bars
-        # self.dataord[y+'_err'] = np.ones(len(self.dataord[y])) * 5  # TESTING
-        if self.dataord[y+'_err'] is not None:
+        # self.dataord[y+'_err'] = np.ones(len(self.dataord[y])) * 5  # TESTING errobars
+        if y+'_err' in self.dataord.columns:
             if ecolor is None: ecolor = mpl.colors.to_rgba('0.5', 0.8)
-            ax.errorbar(x, self.dataord[y], yerr=self.dataord[y+'_err'], fmt='none', ecolor=ecolor, elinewidth=elinewidth, capsize=capsize, markeredgewidth=markeredgewidth, zorder=zorder-1)
+            ax.errorbar(x[m], self.dataord[y][m], yerr=self.dataord[y+'_err'][m], fmt='none', ecolor=ecolor, elinewidth=elinewidth, capsize=capsize, markeredgewidth=markeredgewidth, zorder=zorder-1)
         # Colorbar
         if z is not None:
             cbar = plt.colorbar(sc, ax=ax, label=zlabel)
@@ -526,7 +815,12 @@ class Spectra():
     Collection of (time series) spectra of the same instrument.
     """
 
-    def __init__(self, lisfilin, inst, dirout='./', obj=None, tag=None, ordcut=True, saveordnoncut=False, deleteindividual=False, ext=0):
+    def __init__(self, lisfilin, inst, dirout='./', obj=None, tag=None, deleteindividual=False, ext=0,
+    # carmnir parameters
+    ordcut=True, saveordnoncut=False,
+    # harps and harpsn parameters
+    readblaze=True, dirblaze=None, filblaze=None,
+    ):
         """
         tag : str, optional
             Tag to add to the object name (e.g. type of reduction, sky subtracted...).
@@ -540,15 +834,15 @@ class Spectra():
         
         # Acces the flux `f` of all spectra
         >>> spectra = Spectra(lisfilin, inst)
-        >>> spectra.f.shape
+        >>> spectra.dataspec['f'].shape
         (4, 61, 4096)
         
         # Access the flux `f` of order 4 for all spectra:
-        >>> spectra.f[:,4,:].shape
+        >>> spectra.dataspec['f'][:,4,:].shape
         (4, 4096)
 
         # Access the flux `f` of orders 4 to 8 and pixels 1500 to 1600 for the first 3 observations:
-        >>> spectra.f[:3,4:9,1500:1601].shape
+        >>> spectra.dataspec['f'][:3,4:9,1500:1601].shape
         (3, 5, 101)
         ```
         """
@@ -569,7 +863,7 @@ class Spectra():
         # Get filenames
         self.lisfilname = [spec.filname for spec in self.lisspec]
 
-        # Rearrange individial data into property for all spectra
+        # Rearrange individial data into dictionary of properties for all spectra in `dataspec`
         self.dataspec = {}
         for k in self.lisspec[0].dataspec.keys():
             self.dataspec[k] = np.array([spec.dataspec[k] for spec in self.lisspec])
@@ -587,6 +881,23 @@ class Spectra():
         lisdataheader = [sp.dataheader for sp in self.lisspec]
         self.dataheader = pd.DataFrame(lisdataheader, index=self.lisfilname)
         del lisdataheader
+
+        # Get per order parameters in `dataord` attribute
+        # dataord is a dictionary with a pandas dataframe for each propety, e.g. dataord['snr'] is a pandas dataframe with the S/N of all orders (columns) for all spectra (index). Can shift orders and spectra with `dataord['snr'].T`.
+        lisdataord = [sp.dataord for sp in self.lisspec]
+        self.dataord = {}
+        for k in lisdataord[0].keys():
+            self.dataord[k] = []
+            for i, d in enumerate(lisdataord):
+                self.dataord[k].append(d[k])
+            self.dataord[k] = pd.DataFrame(self.dataord[k], index=self.lisfilname)
+        
+        # Add per order parameters from `dataord` to `dataheader`. Keywords will be '{parameter}o{ord}' where parameter is the column in `dataord` (e.g. 'snr') and ord is the order number.
+        for k in self.dataord.keys():
+            # Update colum names from order number to {k}o{ord}
+            rename_cols = {o: f'{k}o{o}' for o in self.dataord[k].columns}
+            dftemp = self.dataord[k].rename(columns=rename_cols)
+            self.dataheader = pd.concat([self.dataheader, dftemp], axis=1)
 
         # Delete individual Spectrum objects to save memory
         if deleteindividual: del self.lisspec
@@ -714,10 +1025,86 @@ class Spectra():
     def plot_spectra_map(self, o=0):
         """
         Plot spectra flux matrix, order in `o`.
+        TODO
         """
         pass
         return
 
+
+    def plot_dataord(self, y, ax=None, ords=None, lisspec=None, z=None, xlabel='Order', ylabel=None, zlabel=None, title='', zorder=0, s=100, edgecolors='k', linewidths=0.5, ecolor=None, elinewidth=1.5, capsize=3, markeredgewidth=1.5, cmap=None, **kwargs):
+        """
+        Plot property `y` vs orders for orders in `ords` and spectra in `lisspec`. Optional color code by general spectrum property `z` from self.dataheader.
+
+        Expect lisspec and ord to be sorted (increasing).
+        """
+        if ax is None: ax = plt.gca()
+        if lisspec is None: lisspec = np.arange(len(self.lisfilin))
+        if np.issubdtype(type(lisspec), np.integer): lisspec = [lisspec]  # make sure it is a list
+        if ords is None: ords = self.ords
+        if np.issubdtype(type(ords), np.integer): ords = [ords]  # make sure it is a list
+
+        # if x is None: x = self.ords
+        # if ords is None:
+        #     m = np.ones_like(self.ords, dtype=bool)
+        # else:
+        #     m = np.zeros_like(self.ords, dtype=bool)
+        #     m[ords] = True
+
+        # Get data from dataframe and cut by spectra (y and z) and orders (y)
+        datay = self.dataord[y].iloc[lisspec, ords]
+        # self.dataord[y+'_err'] = self.dataord[y].copy() / 5  # TESTING errobars
+        if y+'_err' in self.dataord.keys(): datayerr = self.dataord[y+'_err'].iloc[lisspec, ords]
+
+
+        zlabel = z if zlabel is None else zlabel
+        dataz = self.dataheader[z].iloc[lisspec] if z is not None else None
+
+        # Colors
+        if (z is None) and (cmap is None):  # use default color cycle
+            pass
+        elif (z is None) and (cmap is not None):  # use cmap with spectrum index
+            cmap = mpl.colormaps.get_cmap(cmap)
+            norm = mpl.colors.Normalize(vmin=np.nanmin(lisspec), vmax=np.nanmax(lisspec))
+        elif (z is not None):  # use cmap with property z
+            if cmap is None: cmap = 'viridis'  # default cmap
+            cmap = mpl.colormaps.get_cmap(cmap)
+            norm = mpl.colors.Normalize(vmin=np.nanmin(dataz), vmax=np.nanmax(dataz))
+
+        # Plot scatter
+        for i, _ in enumerate(datay.index):
+            if z is not None:
+                c = cmap(norm(dataz.iloc[i]))
+            elif cmap is not None: c = cmap(norm(i))
+            else: c = None
+            sc = ax.scatter(ords, datay.iloc[i], c=c, zorder=zorder, s=s, edgecolors=edgecolors, linewidths=linewidths, **kwargs)
+            # Error bars
+            if y+'_err' in self.dataord.keys():
+                if ecolor is None: ecolor = mpl.colors.to_rgba('0.5', 0.8)
+                ax.errorbar(ords, datay.iloc[i], yerr=datayerr.iloc[i], fmt='none', ecolor=ecolor, elinewidth=elinewidth, capsize=capsize, markeredgewidth=markeredgewidth, zorder=zorder-1)
+        # Colorbar
+        if z is not None:
+            cb = plt.colorbar(mpl.cm.ScalarMappable(norm=norm, cmap=cmap), ax=ax, label=zlabel)
+            cb.minorticks_on()
+        # Style
+        if ylabel is None: ylabel = y
+        ax.set(xlabel=xlabel, ylabel=ylabel, title=title)
+        ax.minorticks_on()
+        # Force x-labels to be integers
+        ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+        return ax
+
+
+    def fig_dataord(self, y, filout=None, sh=False, sv=True, figsize=(8, 5), **kwargs):
+        """
+        """
+        fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
+        ax = self.plot_dataord(y, ax=ax, **kwargs)
+        if sh: plt.show()
+        if sv:
+            if filout is None: filout = f'{self.dirout}/{self.filname}_ord_{y}.pdf'
+            fig.savefig(filout)
+        plt.close()
+        return
 
 
 

@@ -29,3 +29,10 @@ build-backend = 'setuptools.build_meta'
 
 [tool.setuptools_scm]
 write_to = "popurri/_version.py"
+
+[project.optional-dependencies]
+docs = [
+    "sphinx",
+    "sphinx-automodapi",
+    "numpydoc",
+]

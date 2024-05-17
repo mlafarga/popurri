@@ -18,7 +18,7 @@ import pandas as pd
 from .plotutils import wavelength_label
 
 dirhere = os.path.dirname(__file__)
-dirdata = os.path.join(dirhere, '../data/')
+dirdata = os.path.join(dirhere, './data/')
 
 ###############################################################################
 
@@ -207,15 +207,15 @@ def read_ords_expres(filords):
 
 def read_ords_harps(filords):
     # inst = 'harps'
-    # dataords = pd.read_csv(os.path.join(dirin, '{}_orders.csv'.format(inst)), comment='#', skipinitialspace=True, index_col=0)
-    dataords = pd.read_csv(filords, comment='#', skipinitialspace=True, index_col=0)
-    dataords.sort_index(inplace=True)
-    dataords['ord'] = dataords.index
+    # dataord = pd.read_csv(os.path.join(dirin, '{}_orders.csv'.format(inst)), comment='#', skipinitialspace=True, index_col=0)
+    dataord = pd.read_csv(filords, comment='#', skipinitialspace=True, index_col=0)
+    dataord.sort_index(inplace=True)
+    dataord['ord'] = dataord.index
 
     # Transform from nm to A
-    dataords['wmin_A'] = dataords['wmin_nm'] * 10.
-    dataords['wmax_A'] = dataords['wmax_nm'] * 10.
-    return dataords
+    dataord['wmin_A'] = dataord['wmin_nm'] * 10.
+    dataord['wmax_A'] = dataord['wmax_nm'] * 10.
+    return dataord
 
 
 def read_ords_harpsn(filords):
@@ -237,9 +237,9 @@ def read_ords(inst, filords, **kwargs):
     """
     Read orders of specific instrument.
     """
-    # dataords = pd.read_csv(filords)
+    # dataord = pd.read_csv(filords)
     # if inst == 'harps':
-    #     dataords = read_ords_harps(filords)
+    #     dataord = read_ords_harps(filords)
     dictinst = {
         'carmvis': read_ords_carmvis,
         'carmnir': read_ords_carmnir,
@@ -257,21 +257,32 @@ def read_ords(inst, filords, **kwargs):
     if inst != 'carmnir':
         kwargs.pop('ordcut')
     try:
-        dataords = dictinst[inst](filords, **kwargs)
+        dataord = dictinst[inst](filords, **kwargs)
     except:
         print(f'Instrument {inst} not implemented')
-    return dataords
+    return dataord
 
 
 ###############################################################################
 
 class SpectrographsProperties():
     """
-    General properties of spectrographs
+    General properties of spectrographs.
+
+    Attributes
+    ----------
+    data : pd.DataFrame
+        Spectrograph properties read from file.
+    dirout : str
+        Output directory to save files and figures.
+    
+    Methods
+    -------
+
     """
     def __init__(self, dirout='./', filprop=filprop):
         """
-        Get spectrograph properties from file read with `read_spectrograph_properties` (default ../data/spectrograph/spectrograph_properties.csv)
+        Get spectrograph properties from file read with `read_spectrograph_properties` (default ./data/spectrograph/spectrograph_properties.csv)
         """
         self.data = read_spectrograph_properties(filprop=filprop)
         self.dirout = dirout
@@ -496,14 +507,20 @@ class Spectrograph():
     """
     Spectrograph class
 
+    Attributes
+    ----------
+    inst : str
+        Instrument id. TODO: list of available instruments
+    filprop : str
+        File with spectrograph properties.
     ron:
         Readout noise per detector, red to blue [e-]
     """
 
     def __init__(self, inst, dirout='./', filprop=filprop, ordcut=True):
         """
-        - Populate spectrograph properties from file read with `read_spectrograph_properties` (default ../data/spectrograph/spectrograph_properties.csv)
-        - Get order data (wavelength range, order number, etc.) from file read with `read_ords` (default ../data/spectrograph/{inst}_orders.csv)
+        - Populate spectrograph properties from file read with `read_spectrograph_properties` (default ./data/spectrograph/spectrograph_properties.csv)
+        - Get order data (wavelength range, order number, etc.) from file read with `read_ords` (default ./data/spectrograph/{inst}_orders.csv)
 
         Optional kwargs
         ordcut : bool
@@ -549,7 +566,7 @@ class Spectrograph():
 
         # Order data
         self.filords = get_filords(self.inst)
-        self.dataords = read_ords(self.inst, self.filords, ordcut=ordcut)
+        self.dataord = read_ords(self.inst, self.filords, ordcut=ordcut)
 
 
     # def __repr__(self):
@@ -575,6 +592,8 @@ class Spectrograph():
         """
         Plot orders
 
+        Parameters
+        ----------
         dyfrac : float
             Rectangle height fraction
         
@@ -589,17 +608,22 @@ class Spectrograph():
         olabel : 'ord_real', or 'ord_real_num'
             'ord_real': Real order number
             'ord_real_num': Real order number and order number from 0 to nord
+        
+        Returns
+        -------
+        ax : matplotlib.axes.Axes
+            The axes on which the plot is created.
         """
         # ax = plt.gca() if ax is None else ax
         if ax is None: ax = plt.gca()
         if legendlabel is None: legendlabel = self.inst_acronym_nice
 
-        dfp = self.dataords
+        dfp = self.dataord
         
         # Colors
         if cmap is not None:
             cmap = mpl.colormaps.get_cmap(cmap)
-            norm = mpl.colors.Normalize(vmin=0, vmax=len(self.dataords.index))
+            norm = mpl.colors.Normalize(vmin=0, vmax=len(self.dataord.index))
         else:
             if colorshading:
                 lisalpha = [1/nrows*nr for nr in np.arange(1, nrows+1, 1)]
@@ -656,6 +680,8 @@ class Spectrograph():
         """
         Plot orders
 
+        Parameters
+        ----------
         nrows : int
             1: All orders in the same row
             2: Alternate rows every each other order
@@ -664,17 +690,22 @@ class Spectrograph():
         olabel : 'ord_real', or 'ord_real_num'
             'ord_real': Real order number
             'ord_real_num': Real order number and order number from 0 to nord
+
+        Returns
+        -------
+        ax : matplotlib.axes.Axes
+            The axes on which the plot is created.
         """
         # ax = plt.gca() if ax is None else ax
         if ax is None: ax = plt.gca()
         if legendlabel is None: legendlabel = self.inst_acronym_nice
 
-        dfp = self.dataords
+        dfp = self.dataord
         
         # Colors
         if cmap is not None:
             cmap = mpl.colormaps.get_cmap(cmap)
-            norm = mpl.colors.Normalize(vmin=0, vmax=len(self.dataords.index))
+            norm = mpl.colors.Normalize(vmin=0, vmax=len(self.dataord.index))
         else:
             lisalpha = [1/nrows*nr for nr in np.arange(1, nrows+1, 1)]
             liscolor = [mpl.colors.to_rgba(color, a) for a in lisalpha]
