@@ -28,15 +28,21 @@ author = 'Marina Lafarga Magro'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx_automodapi.automodapi',
-    'numpydoc',
-    'matplotlib.sphinxext.plot_directive',
+    # 'sphinx_automodapi.automodapi',
+    # 'numpydoc',
+    # 'matplotlib.sphinxext.plot_directive',
     # 'sphinx.ext.duration',  # measure duration of Sphinx processing
     # 'sphinx.ext.doctest',  # test snippets in the documentation
     'sphinx.ext.autodoc',  # include documentation from docstrings
     'sphinx.ext.autosummary',  # generate autodoc summaries
     'sphinx.ext.intersphinx',  # link to other projects' documentation
 ]
+
+intersphinx_mapping = {
+    'python': ('https://docs.python.org/3/', None),
+    'sphinx': ('https://www.sphinx-doc.org/en/master/', None),
+}
+intersphinx_disabled_domains = ['std']
 
 numpydoc_show_class_members = False
 
