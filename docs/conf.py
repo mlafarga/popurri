@@ -10,10 +10,12 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-# import os
-# import sys
+import os
+import sys
 # sys.path.insert(0, os.path.abspath('.'))
+sys.path.insert(0, os.path.abspath('./../popurri/'))
 
+import popurri
 
 # -- Project information -----------------------------------------------------
 
@@ -21,6 +23,7 @@ project = 'popurri'
 copyright = '2024, Marina Lafarga Magro'
 author = 'Marina Lafarga Magro'
 
+version = popurri.__version__
 
 # -- General configuration ---------------------------------------------------
 
@@ -28,13 +31,14 @@ author = 'Marina Lafarga Magro'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    # 'sphinx_automodapi.automodapi',
-    # 'numpydoc',
-    # 'matplotlib.sphinxext.plot_directive',
+    # 'sphinx.ext.autodoc',  # include documentation from docstrings
+    # 'sphinx.ext.autosummary',  # generate autodoc summaries
+    'sphinx_automodapi.automodapi',  # automatic generation of API documentation pages for Python package modules
+    'sphinx_automodapi.smart_resolver',
+    'numpydoc',
+    'matplotlib.sphinxext.plot_directive',
     # 'sphinx.ext.duration',  # measure duration of Sphinx processing
     # 'sphinx.ext.doctest',  # test snippets in the documentation
-    'sphinx.ext.autodoc',  # include documentation from docstrings
-    'sphinx.ext.autosummary',  # generate autodoc summaries
     'sphinx.ext.intersphinx',  # link to other projects' documentation
     'sphinx_rtd_theme',  # readthedocs theme
 ]
@@ -45,7 +49,8 @@ intersphinx_mapping = {
 }
 intersphinx_disabled_domains = ['std']
 
-# numpydoc_show_class_members = False
+automodapi_toctreedirnm = './api'
+numpydoc_show_class_members = False  # automodapi: needed to avoid having methods and attributes of classes being shown multiple times
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
