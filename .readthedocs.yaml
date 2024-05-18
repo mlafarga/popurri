@@ -7,7 +7,7 @@ build:
 
 python:
   install:
-    - requirements: requirements.txt  # package requirements
+    # - requirements: requirements.txt  # package requirements
     - requirements: docs/requirements.txt
     # Install our python package before building the docs
     - method: pip
