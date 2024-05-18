@@ -1,5 +1,7 @@
 """
+`spectrum` module
 
+Methods to read and plot spectra from different instruments.
 """
 import os
 from pathlib import Path

@@ -15,6 +15,7 @@ Welcome to popurri's documentation!
 
    installation
    usage
+   Guides <guides>
    api
 
 

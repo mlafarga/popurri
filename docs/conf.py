@@ -42,6 +42,7 @@ extensions = [
     'sphinx.ext.intersphinx',  # link to other projects' documentation
     'sphinx_rtd_theme',  # readthedocs theme
     # 'sphinx_search.extension',  #  enable search as you type for docs
+    'nbsphinx',  # jupyter notebook support
 ]
 
 intersphinx_mapping = {
