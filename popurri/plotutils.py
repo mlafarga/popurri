@@ -139,6 +139,8 @@ def figout(fig, sv=True, filout='test', svext=['pdf'], sh=False, cl=True):
     -------
     None
     """
+    if svext is None: svext = ['pdf']
+    if isinstance(svext, str): svext = [svext]
     if sv:
         for ext in svext: fig.savefig(filout+'.'+ext)
     if sh: plt.show()
@@ -240,11 +242,24 @@ def plot_map(f, label, ax, interpolation='none', origin='lower', extent=None, vm
 def wavelength_label(x='nm'):
     """
     """
-    if x == 'nm': xlabel = 'Wavelength [nm]'
-    elif x == 'A': xlabel = 'Wavelength $[\mathrm{\AA}]$'
-    elif x == 'mum': xlabel = 'Wavelength $[\mu\mathrm{m}]$'
-    # TODO add more units
-    return xlabel
+    dictwlabel = {
+        'nm': 'Wavelength [nm]',
+        'A': 'Wavelength $[\mathrm{\AA}]$',
+        'mum': 'Wavelength $[\mu\mathrm{m}]$',
+        # 'Hz': 'Frequency [Hz]',
+        # 'THz': 'Frequency [THz]',
+        # 'eV': 'Energy [eV]',
+        # 'keV': 'Energy [keV]',
+        # 'MeV': 'Energy [MeV]',
+        # 'GeV': 'Energy [GeV]',
+        # 'HzA': 'Energy [Hz$\cdot$\AA]',
+        # 'THzA': 'Energy [THz$\cdot$\AA]',
+        # 'eVA': 'Energy [eV$\cdot$\AA]',
+        # 'keVA': 'Energy [keV$\cdot$\AA]',
+        # 'MeVA': 'Energy [MeV$\cdot$\AA]',
+        # 'GeV': 'Energy [GeV$\cdot$\AA]',
+    }
+    return dictwlabel[x]
 
 
 ###############################################################################
