@@ -42,3 +42,6 @@ docs = [
     "sphinx_rtd_theme",
     "nbsphinx",
 ]
+
+[project.scripts]
+tellmask = 'popurri.scripts.tellmask_from_esoskycalc:main'
