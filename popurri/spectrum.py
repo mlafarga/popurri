@@ -25,6 +25,8 @@ dirdata = os.path.join(dirhere, './data/')
 
 ###############################################################################
 
+# Functions to read spectra and extra data
+# ----------------------------------------
 
 # CARMENES
 
@@ -354,7 +356,7 @@ def read_spectrum(filin, inst, **kwargs):
     return dataspec
 
 
-def read_spectra(lisfilin, inst, returnclass=False, dirout='./', **kwargs):
+def read_spectra(lisfil, inst, returnclass=False, dirout='./', **kwargs):
     """
     returnclass : bool
         Return a list of Spectrum objects if True, or a list of dictionaries if False.
@@ -365,9 +367,13 @@ def read_spectra(lisfilin, inst, returnclass=False, dirout='./', **kwargs):
     saveordnoncut : bool
         carmnir
     """
+    # Check that lisfil is a list or array, and not a string with the name of a single file
+    if isinstance(lisfil, str):
+        lisfil = [lisfil]
+
     lisdataspec = []
-    m = np.ones(len(lisfilin), dtype=bool)
-    for i, filin in enumerate(lisfilin):
+    m = np.ones(len(lisfil), dtype=bool)
+    for i, filin in enumerate(lisfil):
         try:
             if returnclass:
                 lisdataspec.append(Spectrum(filin, inst, dirout, **kwargs))
@@ -376,8 +382,8 @@ def read_spectra(lisfilin, inst, returnclass=False, dirout='./', **kwargs):
         except FileNotFoundError:
             print(f'File {filin} not found, removing from list')
             m[i] = False
-    lisfilin = np.array(lisfilin)[m]
-    return lisdataspec, lisfilin
+    lisfil = np.array(lisfil)[m]
+    return lisdataspec, lisfil
 
 
 def read_header(filin, ext=0):
@@ -467,6 +473,81 @@ def get_header_snr(filin, inst, ext=0):
 
 ###############################################################################
 
+
+# Other utils
+# -----------
+
+# Wavelength vacuum/air
+
+def wvac2air(w):
+    """Transform vacuum wavelength to air wavelength.
+    Formula from: Ciddor 1996, Applied Optics 62, 958.
+
+    Parameters
+    ----------
+    w : float or array-like
+        Vacuum wavelength to be transformed to air, in A. If array-like, w sorted in increasing or decreasing order.
+    """
+    scalar = False
+    if isinstance(w, (int, float)):
+        w = [w]
+        scalar = True
+    w = np.array([w])
+    wair = w.copy()
+
+    mask = w > 2000.  # Modify only wavelength above 2000 A
+
+    s2 = (1e4/w[mask])**2
+    f = 1.+0.05792105/(238.0185-s2)+0.00167917/(57.362-s2)
+    wair[mask] = w[mask]/f
+    return wair[0][0] if scalar else wair[0]
+
+
+def wair2vac(w):
+    """Transform air wavelength to vacuum wavelength.
+    Formula from: Ciddor 1996, Applied Optics 62, 958.
+
+    w : float or array-like
+        Air wavelength to be transformed to vacuum, in A. If array-like, w sorted in increasing or decreasing order.
+    """
+    scalar = False
+    if isinstance(w, (int, float)):
+        w = [w]
+        scalar = True
+    w = np.array([w])
+    wvac = w.copy()
+
+    mask = w > 2000.  # Modify only wavelength above 2000 A
+
+    s2 = (1e4/w[mask])**2
+    f = 1.+0.05792105/(238.0185-s2)+0.00167917/(57.362-s2)
+    wvac[mask] = w[mask]*f
+    return wvac[0][0] if scalar else wvac[0]
+
+
+# Doppler shift
+
+def dopplershift(x, v, rel=True):
+    """
+    x : float
+        Wavelength
+    v : float
+        Velocity, m/s
+    """
+    C_MS = 2.99792458*1.e8  # Light speed [m/s]
+    if rel: a = np.sqrt((1 + v / C_MS) / (1 - v / C_MS))
+    else: a = (1 - v / C_MS)
+    xprime = x * a
+    return xprime
+
+
+
+###############################################################################
+
+
+# Spectrum observations classes
+# -----------------------------
+
 class Spectrum():
     """
     Spectrum class
@@ -477,7 +558,7 @@ class Spectrum():
     - `dataord`: Pandas DataFrame with per order data such as the S/N.
     """
 
-    def __init__(self, filin, inst, dirout='./', obj=None, tag=None, headertable=None,
+    def __init__(self, filin, inst, dirout='./', obj=None, tag='', headertable=None, ord_ref=None,
     # carmnir parameters
     ordcut=True, saveordnoncut=False,
     # harps and harpsn parameters
@@ -516,6 +597,10 @@ class Spectrum():
         self.Spectrograph = spectrograph.Spectrograph(self.inst, dirout=self.dirout, ordcut=ordcut)
         # Add "real" orders from Spectrograph object
         self.ords_real = self.Spectrograph.dataord['ord_real'].values
+        # Add order reference if ord_ref is None
+        self.ord_ref = self.Spectrograph.ord_ref if ord_ref is None else ord_ref
+        # Add pixel size in velocity [m/s]
+        self.pixel_ms = self.Spectrograph.pixel_ms
 
         # Add general parameters from `dataspec` attribute (and remove from self.dataspec)
         self.nord = self.dataspec.pop('nord', None)
@@ -817,7 +902,7 @@ class Spectra():
     Collection of (time series) spectra of the same instrument.
     """
 
-    def __init__(self, lisfilin, inst, dirout='./', obj=None, tag=None, deleteindividual=False, ext=0,
+    def __init__(self, lisfil, inst, dirout='./', obj=None, tag='', deleteindividual=False, ext=0,
     # carmnir parameters
     ordcut=True, saveordnoncut=False,
     # harps and harpsn parameters
@@ -832,10 +917,10 @@ class Spectra():
 
         Accessing the properties of Spectra
         ```
-        # `lisfilin` is a list of 4 spectra with 61 orders and 4096 pixels each
+        # `lisfil` is a list of 4 spectra with 61 orders and 4096 pixels each
         
         # Acces the flux `f` of all spectra
-        >>> spectra = Spectra(lisfilin, inst)
+        >>> spectra = Spectra(lisfil, inst)
         >>> spectra.dataspec['f'].shape
         (4, 61, 4096)
         
@@ -848,8 +933,8 @@ class Spectra():
         (3, 5, 101)
         ```
         """
-        self.lisfilin = lisfilin
-        self.lisfilin_initial = lisfilin
+        self.lisfil = lisfil
+        self.lisfil_initial = lisfil
         self.inst = inst
         self.obj = obj
         self.tag = tag
@@ -860,7 +945,7 @@ class Spectra():
         headertable = read_header_kw_table()
 
         # Read files into Spectrum objects
-        self.lisspec, self.lisfilin = read_spectra(self.lisfilin_initial, self.inst, returnclass=True, dirout=dirout, ordcut=ordcut, saveordnoncut=saveordnoncut, headertable=headertable)
+        self.lisspec, self.lisfil = read_spectra(self.lisfil_initial, self.inst, returnclass=True, dirout=dirout, ordcut=ordcut, saveordnoncut=saveordnoncut, headertable=headertable)
 
         # Get filenames
         self.lisfilname = [spec.filname for spec in self.lisspec]
@@ -874,6 +959,8 @@ class Spectra():
         self.nord = self.lisspec[0].nord
         self.ords = self.lisspec[0].ords
         self.ords_real = self.lisspec[0].ords_real
+        self.ord_ref = self.lisspec[0].ord_ref
+        self.pixel_ms = self.lisspec[0].pixel_ms
         self.npix = self.lisspec[0].npix
         if self.obj is None: self.obj = self.lisspec[0].obj
         if self.tag is None: self.tag = self.lisspec[0].tag
@@ -1040,7 +1127,7 @@ class Spectra():
         Expect lisspec and ord to be sorted (increasing).
         """
         if ax is None: ax = plt.gca()
-        if lisspec is None: lisspec = np.arange(len(self.lisfilin))
+        if lisspec is None: lisspec = np.arange(len(self.lisfil))
         if np.issubdtype(type(lisspec), np.integer): lisspec = [lisspec]  # make sure it is a list
         if ords is None: ords = self.ords
         if np.issubdtype(type(ords), np.integer): ords = [ords]  # make sure it is a list
