@@ -10,9 +10,13 @@ dependencies = [
     "numpy",
     "astropy",
     "pandas",
+    "scipy",
+    "lmfit",
     "matplotlib",
     "cmocean",
     "colorcet",
+    "tqdm",
+    "ipdb",
 ]
 dynamic = ["version"]
 
