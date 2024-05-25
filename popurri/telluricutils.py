@@ -325,7 +325,7 @@ class ModelEsoSkyCalc():
         return ax
     
 
-    def fig_spec(self, lisfk=None, filout=None, sh=False, sv=True, figsize=(16, 4), svext=['pdf'], **kwargs):
+    def fig_spec(self, figsize=(16, 4), lisfk=None, filout=None, sh=False, sv=True, svext=['pdf'], **kwargs):
         if lisfk is None:
             lisfk = self.data.keys()
             lisfk.remove(self.wk)
@@ -357,7 +357,7 @@ class ModelEsoSkyCalc():
         return ax
 
 
-    def fig_spec_lines(self, filout=None, sh=False, sv=True, figsize=(16, 4), svext=['pdf'], fimin={'color':'0.5', 'zorder':-10}, fimaxl={'color':'b', 'linestyle':'dashed', 'alpha':0.5, 'zorder':-10}, fimaxr={'color':'r', 'linestyle':'dotted', 'alpha':0.5, 'zorder':-10}, **kwargs):
+    def fig_spec_lines(self, figsize=(16, 4), filout=None, sh=False, sv=True, svext=['pdf'], fimin={'color':'0.5', 'zorder':-10}, fimaxl={'color':'b', 'linestyle':'dashed', 'alpha':0.5, 'zorder':-10}, fimaxr={'color':'r', 'linestyle':'dotted', 'alpha':0.5, 'zorder':-10}, **kwargs):
         """
         kwargs : dict
             Only passed to `plot_spec()`.
@@ -377,6 +377,78 @@ class ModelEsoSkyCalc():
             textextra1 = f'_depthmin{self.depthmin:.6f}' if self.depthmin is not None else ''
             textextra = textextra0 + textextra1
             filout = os.path.join(self.diroutplot, f'spec_lines{self.utag}{textextra}')
+        plotutils.figout(fig, sv=sv, filout=filout, svext=svext, sh=sh)
+        return
+
+
+    def plot_spec_transmission(self, ax=None, xunit='A', color='k', alpha=0.8, cmap='viridis', xlabel=None, ylabel='Flux', title='', zorder=100, **kwargs):
+        if ax is None: ax = plt.gca()
+        # Plot total transmission
+        fk = 'ftransmission'
+        ax.plot(self.data[self.wk], self.data[fk], color=color, label='Total transmission', zorder=zorder, alpha=alpha, **kwargs)
+        # Plot components
+        liscomp = ['trans_o3', 'trans_ma', 'trans_rs', 'trans_ms']
+        cmap = mpl.cm.get_cmap(cmap)
+        norm = mpl.colors.Normalize(vmin=0, vmax=len(liscomp) - 1)
+        for i, fc in enumerate(liscomp):
+            ax.plot(self.data[self.wk], self.data[fc], color=cmap(norm(i)), zorder=zorder, label=fc, alpha=alpha, **kwargs)
+        if xlabel is None: xlabel = wavelength_label(x=xunit)
+        ax.set(xlabel=xlabel, ylabel=ylabel, title=title)
+        return ax
+
+
+    def fig_spec_transmission(self, figsize=(16, 10), wmin=6270, wmax=6300, color='k', cmap='viridis', alpha=0.8, lwz=3, xunit='A', filout=None, sh=False, sv=True, svext=['pdf'], **kwargs):
+        """Plot telluric model transmission spectrum, total and different components.
+        Left panels are full wavelength range, right panels are a zoom on a smaller range.
+        Top panels show the spectrum, middle panels the difference between the total and each components, and the bottom panels the ratio between the total and each component.
+        """
+        fig, ax = plt.subplots(3, 2, figsize=figsize, sharex='col', constrained_layout=True)  # sharey='row'
+        axf = ax[0,0]
+        axdiff = ax[1,0]
+        axratio = ax[2,0]
+        axfz = ax[0,1]
+        axdiffz = ax[1,1]
+        axratioz = ax[2,1]
+        # Zoom
+        m = (self.data[self.wk] >= wmin) & (self.data[self.wk] <= wmax)
+
+        # Spectrum
+        # - Plot total transmission
+        fk = 'ftransmission'
+        axf.plot(self.data[self.wk], self.data[fk], color=color, label='Total transmission', alpha=alpha, **kwargs)
+        axfz.plot(self.data[self.wk][m], self.data[fk][m], color=color, label='Total transmission', lw=lwz, alpha=alpha, **kwargs)
+        # - Plot components
+        liscomp = ['trans_o3', 'trans_ma', 'trans_rs', 'trans_ms']
+        cmap = mpl.cm.get_cmap(cmap)
+        norm = mpl.colors.Normalize(vmin=0, vmax=len(liscomp) - 1)
+        for i, fc in enumerate(liscomp):
+            axf.plot(self.data[self.wk], self.data[fc], color=cmap(norm(i)), label=fc, alpha=alpha, **kwargs)
+            axfz.plot(self.data[self.wk][m], self.data[fc][m], color=cmap(norm(i)), label=fc, lw=lwz, alpha=alpha, **kwargs)
+        axf.set(ylabel='Transmission\nspectrum')
+
+        # Diff
+        for i, fc in enumerate(liscomp):
+            axdiff.plot(self.data[self.wk], self.data[fk] - self.data[fc], color=cmap(norm(i)), label=f'Total - {fc}', alpha=alpha, **kwargs)
+            axdiffz.plot(self.data[self.wk][m], self.data[fk][m] - self.data[fc][m], color=cmap(norm(i)), label=f'Total - {fc}', lw=lwz, alpha=alpha, **kwargs)
+        axdiff.set(ylabel='Transmission\nfraction diff.')
+
+        # Ratio
+        for i, fc in enumerate(liscomp):
+            axratio.plot(self.data[self.wk], self.data[fk] / self.data[fc], color=cmap(norm(i)), label=f'Total / {fc}', alpha=alpha, **kwargs)
+            axratioz.plot(self.data[self.wk][m], self.data[fk][m] / self.data[fc][m], color=cmap(norm(i)), label=f'Total / {fc}', lw=lwz, alpha=alpha, **kwargs)
+        axratio.set(ylabel='Transmission\nfraction ratio')
+
+        # Format
+        ax[0,1].set_xlim(wmin, wmax)
+        xlabel = wavelength_label(x=xunit)
+        ax[-1,0].set_xlabel(xlabel)
+        ax[-1,1].set_xlabel(xlabel)
+        for a in ax.flatten():
+            a.minorticks_on()
+        for a in ax[:,0]: 
+            a.legend(fontsize='small')
+        plt.suptitle(self.tag + ' trasmission')
+        if filout is None: filout = os.path.join(self.diroutplot, f'spec_trans_comp{self.utag}')
         plotutils.figout(fig, sv=sv, filout=filout, svext=svext, sh=sh)
         return
 
@@ -626,7 +698,7 @@ class Mask():
         return ax
 
 
-    def fig_mask(self, filout=None, sh=False, sv=True, svext=['pdf'], figsize=(16, 4), **kwargs):
+    def fig_mask(self, figsize=(16, 4), filout=None, sh=False, sv=True, svext=['pdf'], **kwargs):
         fig, ax = plt.subplots(figsize=figsize)
         ax = plot_mask(ax=ax, **kwargs)
         if filout is None:
