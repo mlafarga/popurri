@@ -34,6 +34,7 @@ docs = [
     "numpydoc",
     "sphinx_rtd_theme",
     "nbsphinx",
+    "sphinx-copybutton",
 ]
 test = [
     "pytest>=7",
