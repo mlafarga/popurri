@@ -1,8 +1,20 @@
 """
 Spectrograph-related functions
 
-TODO CRIRES+ plotting different detectons
-TODO ESPRESSO, MAROON-X plotting different slices
+
+
+
+
+
+
+
+
+
+
+
+
+- TODO CRIRES+ plotting different detectors
+- TODO ESPRESSO, MAROON-X plotting different slices
 """
 import os
 import sys
@@ -29,8 +41,8 @@ dictprop_nice = {
     'R': 'R',
     'spectral_sampling_px': 'Mean sampling',
     'pixel_ms': 'Pixel sampling [m/s]',
-    'wmin_nm': '$\lambda_\mathrm{min}$ [nm]',
-    'wmax_nm': '$\lambda_\mathrm{max}$ [nm]',
+    'wmin_nm': r'$\lambda_\mathrm{min}$ [nm]',
+    'wmax_nm': r'$\lambda_\mathrm{max}$ [nm]',
     'ndet': 'Number of detectors',  # in the reduced data
     'ndet_raw': 'Real number of detectors',
     'nord': 'Number of orders',
