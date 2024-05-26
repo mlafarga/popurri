@@ -20,6 +20,21 @@ dependencies = [
 ]
 dynamic = ["version"]
 
+classifiers = [
+    'License :: OSI Approved :: MIT License',
+    'Programming Language :: Python :: 3',
+    'Programming Language :: Fortran',
+    'Intended Audience :: Science/Research',
+    'Topic :: Scientific/Engineering :: Astronomy',
+    'Topic :: Scientific/Engineering :: Physics',
+]
+
+keywords = [
+    "astronomy",
+    "astrophysics",
+    "science",
+]
+
 [project.urls]
 homepage = "https://github.com/mlafarga/popurri"
 
