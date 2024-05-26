@@ -10,14 +10,12 @@ Make sure that the code is installed from source as editable
 
 .. code-block:: bash
 
-
     python -m pip install -e ."[test]"
 
 
 To test the code, go to where the source code is, and run
 
 .. code-block:: bash
-
 
     python -m pytest
 
@@ -29,14 +27,12 @@ To test in different environments, you can use `tox <https://tox.readthedocs.io/
 
 .. code-block:: bash
 
-
     tox
 
 
 This tests all the environments listed in the `tox.ini` file, in `env_list`. To test a specific one, run e.g.
 
 .. code-block:: bash
-
 
     tox -e py39
 
