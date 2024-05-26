@@ -11,6 +11,3 @@ jobs:
       envs: |
         - linux: py38
         - macos: py38
-      coverage: 'codecov'
-    secrets:
-      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
