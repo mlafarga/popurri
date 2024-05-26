@@ -27,13 +27,6 @@ homepage = "https://github.com/mlafarga/popurri"
 requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
 build-backend = 'setuptools.build_meta'
 
-[tool.setuptools]
-
-[tool.setuptools.packages.find]
-
-[tool.setuptools_scm]
-write_to = "popurri/_version.py"
-
 [project.optional-dependencies]
 docs = [
     "sphinx",
@@ -43,10 +36,21 @@ docs = [
     "nbsphinx",
 ]
 test = [
-    "pytest",
+    "pytest>=7",
     # "pytest-doctestplus",
 ]
 
-
 [project.scripts]
 tellmask = 'popurri.scripts.tellmask_from_esoskycalc:main'
+
+[tool.setuptools]
+
+[tool.setuptools.packages.find]
+
+[tool.setuptools_scm]
+write_to = "popurri/_version.py"
+
+[tool.pytest.ini_options]
+pythonpath = [
+  "./tests"
+]

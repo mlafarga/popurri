@@ -395,7 +395,9 @@ def read_header(filin, ext=0):
     return header
 
 
-def read_header_kw_table(verbose=False):
+filheader_kw_table = os.path.join(dirdata, 'spectrograph/header_kws.csv')
+
+def read_header_kw_table(filtable=filheader_kw_table, verbose=False):
     """
     Read table that contains general parameters keywords used in this code and their corresponding FITS header keyword for different instruments. The table is in file 'header_kws.csv' in directory `dirdata`.
 
@@ -407,7 +409,6 @@ def read_header_kw_table(verbose=False):
     |berv    |HIERARCH CARACAL BERV|HIERARCH ESO DRS BERV|
     ```
     """
-    filtable = os.path.join(dirdata, 'spectrograph/header_kws.csv')
     df = pd.read_csv(filtable, comment='#').set_index('param')
     if verbose: print('General parameters from FITS header:', df.index)
     return df

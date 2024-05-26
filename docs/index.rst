@@ -17,6 +17,7 @@ Welcome to popurri's documentation!
    usage
    Guides <guides>
    api
+   testing
 
 
 Indices and tables
@@ -25,3 +26,4 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
+

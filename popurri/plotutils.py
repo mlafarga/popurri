@@ -244,8 +244,8 @@ def wavelength_label(x='nm'):
     """
     dictwlabel = {
         'nm': 'Wavelength [nm]',
-        'A': 'Wavelength $[\mathrm{\AA}]$',
-        'mum': 'Wavelength $[\mu\mathrm{m}]$',
+        'A': r'Wavelength $[\mathrm{\AA}]$',
+        'mum': r'Wavelength $[\mathrm{\mu m}]$',
         # 'Hz': 'Frequency [Hz]',
         # 'THz': 'Frequency [THz]',
         # 'eV': 'Energy [eV]',
