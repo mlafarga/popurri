@@ -669,6 +669,10 @@ class Spectrum():
         if wmax is None: wmax = np.nanmax(self.dataspec[x][ords])
         mp = (self.dataspec[x] >= wmin) & (self.dataspec[x] <= wmax)
 
+        # Update orders to be plotted (wmin and wmax have preference over input orders in `ords`)
+        mp_ords = mp.any(axis=1)  # Any order with True (i.e. will be plotted)
+        ords = self.ords[mp_ords]
+
         # Normalisation and offset
         if normflux is not None:
             yp = np.array([self.dataspec[y][o] / normflux(self.dataspec[y][o]) + offset*i for i, o in enumerate(self.ords)])
@@ -752,6 +756,10 @@ class Spectrum():
         if pmin is None: pmin = np.nanmin(self.dataspec[x][ords])
         if pmax is None: pmax = np.nanmax(self.dataspec[x][ords])
         mp = (self.dataspec[x] >= pmin) & (self.dataspec[x] <= pmax)
+
+        # Update orders to be plotted (wmin and wmax have preference over input orders in `ords`)
+        mp_ords = mp.any(axis=1)  # Any order with True (i.e. will be plotted)
+        ords = self.ords[mp_ords]
 
         # Normalisation and offset
         if normflux is not None:
@@ -1012,6 +1020,9 @@ class Spectra():
         ords : list-like, optional
             List of orders to plot. If `None` (default), all orders are plotted.
         
+        wmin, wmax: floats, optional
+            Override `ords`
+            
         lisspec : list-like, optional
             List of observations (the number) to plot. Default is None, which plots all spectra in `lisspec`.
 
@@ -1049,6 +1060,10 @@ class Spectra():
         if wmin is None: wmin = np.nanmin(self.dataspec['w'][lisspec][:,ords])
         if wmax is None: wmax = np.nanmax(self.dataspec['w'][lisspec][:,ords])
         mp = (self.dataspec['w'] >= wmin) & (self.dataspec['w'] <= wmax)
+
+        # Update orders to be plotted (wmin and wmax have preference over input orders in `ords`)
+        mp_ords = mp[0].any(axis=1)  # Any order with True (i.e. will be plotted)
+        ords = self.ords[mp_ords]
 
         # if cprop is not None:
         #     if cmap is None: cmap = 'viridis'
