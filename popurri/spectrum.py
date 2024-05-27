@@ -1001,7 +1001,7 @@ class Spectra():
         return f''
     
 
-    def plot_spectra(self, ax=None, ords=None, lisspec=None, wmin=None, wmax=None, legendlabel=None, legendloc=None, xunit='A', xlabel=None, ylabel='Flux', title='', cprop=None, cprop_all=False, cbar=None, cbarlabel=None, cmap=None, lw=1, linestyle0='-', linestyle1='-', alpha0=1, alpha1=0.7):
+    def plot_spectra(self, ax=None, ords=None, lisspec=None, wmin=None, wmax=None, legendlabel=None, legendwhich='first', legendloc=None, xunit='A', xlabel=None, ylabel='Flux', title='', cprop=None, cprop_all=False, cbar=None, cbarlabel=None, cmap=None, lw=1, linestyle0='-', linestyle1='-', alpha0=1, alpha1=0.7, zorder=1):
         """
         Plot spectra flux vs wavelength, orders in `ords`.
 
@@ -1015,7 +1015,7 @@ class Spectra():
         lisspec : list-like, optional
             List of observations (the number) to plot. Default is None, which plots all spectra in `lisspec`.
 
-        cprop : str, optional
+        cprop : array, optional
             Color based on property of the spectrum (e.g. S/N, airmass, BJD...). Uses `cmap` to define the color map. If `cmap` is None, use colormap viridis.
 
         cprop_all : bool, optional
@@ -1031,10 +1031,13 @@ class Spectra():
             For alternating orders
         alpha0, alpha1 : float, optional
             For alternating orders
-            
-        legendlabel :
-            None
-            'obs'
+        
+        legendwhich : 'first' or 'all', optional
+            To label (with `legendlabel`) only the first spectrum in the list, or all spectra in the list. Default is 'first'.
+        legendlabel : str, optional, default None
+            Label for the legend. Can label the first order of a single spectrum in the list, or the first order of all spectra in the list.
+            If only the first spectrum is labelled (with `legendwhich='first'`), the labe should be somethign like 'Observations' or 'Spectra'.
+            If all spectra are labelled, the label will be the name of each spectra.
         """
         if ax is None: ax = plt.gca()
         if lisspec is None: lisspec = np.arange(len(self.lisspec))
@@ -1068,23 +1071,26 @@ class Spectra():
         if cbar is None: cbar = False
 
         # Plot
-        for i in lisspec:
-            spec = self.lisspec[i]
+        for i, idx in enumerate(lisspec):
+            spec = self.lisspec[idx]
             if cprop is not None:
-                c = cmap(norm(cprop[i]))
+                c = cmap(norm(cprop[idx]))
             elif cmap is not None:
                 c = cmap(norm(i))
             else:
-                c = plt.rcParams['axes.prop_cycle'].by_key()['color'][i]
-            # c = cmap(norm(i)) if cmap is not None else plt.rcParams['axes.prop_cycle'].by_key()['color'][i]
+                c = plt.rcParams['axes.prop_cycle'].by_key()['color'][idx]
+            # c = cmap(norm(i)) if cmap is not None else plt.rcParams['axes.prop_cycle'].by_key()['color'][idx]
             # Loop over orders
             for o in ords:
-                mpo = mp[i][o]
+                mpo = mp[idx][o]
                 if not any(mpo): continue  # skip if all pixels masked
                 a = alpha0 if o % 2 == 1 else alpha1
                 linestyle = linestyle0 if o % 2 == 1 else linestyle1
-                label = f'{spec.filname}' if o == ords[0] else None
-                ax.plot(spec.dataspec['w'][o][mpo], spec.dataspec['f'][o][mpo], c=c, alpha=a, lw=lw, linestyle=linestyle, label=label,)
+                if legendwhich == 'all':
+                    label = f'{spec.filname}' if (o == ords[0]) else None
+                elif legendwhich == 'first':
+                    label = legendlabel if (o == ords[0]) and (i == 0) else None
+                ax.plot(spec.dataspec['w'][o][mpo], spec.dataspec['f'][o][mpo], c=c, alpha=a, lw=lw, linestyle=linestyle, label=label, zorder=zorder)
         if cbar:
             cb = plt.colorbar(mpl.cm.ScalarMappable(norm=norm, cmap=cmap), ax=ax, label=cbarlabel)
             cb.minorticks_on()
