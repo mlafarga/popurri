@@ -700,7 +700,7 @@ class Mask():
 
     def fig_mask(self, figsize=(16, 4), filout=None, sh=False, sv=True, svext=['pdf'], **kwargs):
         fig, ax = plt.subplots(figsize=figsize)
-        ax = plot_mask(ax=ax, **kwargs)
+        ax = self.plot_mask(ax=ax, **kwargs)
         if filout is None:
             filout = os.path.join(self.diroutplot, 'mask' + self.utag)
         plotutils.figout(fig, sv=sv, filout=filout, svext=svext, sh=sh)
