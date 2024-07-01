@@ -1027,15 +1027,22 @@ class Spectra():
 
     def dopplershift(self, lisv, rel=True, x='w', xnew='wshift'):
         C_MS = 2.99792458*1.e8  # Light speed [m/s]
-        for i, k in enumerate(self.dataspec.keys()):
-            spec = self.dataspec[k]
+        liswshift = []
+        # for i, k in enumerate(self.dataspec.keys()):
+        for i, k in enumerate(self.lisfilname):
+            # spec = self.lisspec[i]  # only works is deleteindividual=False
+            w = self.dataspec[x][i]
             v = lisv[k]
             if rel: a = np.sqrt((1 + v / C_MS) / (1 - v / C_MS))
             else: a = (1 - v / C_MS)
-            wshift = np.ones_like(spec.dataspec[x]) * np.nan
-            for o in spec.ords:
-                wshift[o] = spec.dataspec[x][o] * a
-            self.dataspec[k].dataspec[xnew] = wshift
+            # wshift = np.ones_like(spec.dataspec[x]) * np.nan
+            wshift = np.ones_like(w) * np.nan
+            for o in self.ords:
+                # wshift[o] = spec.dataspec[x][o] * a
+                wshift[o] = w[o] * a
+            # self.dataspec[k].dataspec[xnew] = wshift
+            liswshift.append(wshift)
+        self.dataspec[xnew] = np.array(liswshift)
         return
 
 
