@@ -1128,7 +1128,28 @@ class Spectra():
 
         # Plot
         for i, idx in enumerate(lisspec):
-            spec = self.lisspec[idx]
+            # -------------
+            # Only works if deleteindividual=False
+            # spec = self.lisspec[idx]
+            # if cprop is not None:
+            #     c = cmap(norm(cprop[idx]))
+            # elif cmap is not None:
+            #     c = cmap(norm(i))
+            # else:
+            #     c = plt.rcParams['axes.prop_cycle'].by_key()['color'][idx]
+            # # c = cmap(norm(i)) if cmap is not None else plt.rcParams['axes.prop_cycle'].by_key()['color'][idx]
+            # # Loop over orders
+            # for o in ords:
+            #     mpo = mp[idx][o]
+            #     if not any(mpo): continue  # skip if all pixels masked
+            #     a = alpha0 if o % 2 == 1 else alpha1
+            #     linestyle = linestyle0 if o % 2 == 1 else linestyle1
+            #     if legendwhich == 'all':
+            #         label = f'{spec.filname}' if (o == ords[0]) else None
+            #     elif legendwhich == 'first':
+            #         label = legendlabel if (o == ords[0]) and (i == 0) else None
+            #     ax.plot(spec.dataspec[x][o][mpo], spec.dataspec[y][o][mpo], c=c, alpha=a, lw=lw, linestyle=linestyle, label=label, zorder=zorder)
+            # -------------
             if cprop is not None:
                 c = cmap(norm(cprop[idx]))
             elif cmap is not None:
@@ -1143,10 +1164,11 @@ class Spectra():
                 a = alpha0 if o % 2 == 1 else alpha1
                 linestyle = linestyle0 if o % 2 == 1 else linestyle1
                 if legendwhich == 'all':
-                    label = f'{spec.filname}' if (o == ords[0]) else None
+                    label = f'{self.lisfilname[i]}' if (o == ords[0]) else None
                 elif legendwhich == 'first':
                     label = legendlabel if (o == ords[0]) and (i == 0) else None
-                ax.plot(spec.dataspec[x][o][mpo], spec.dataspec[y][o][mpo], c=c, alpha=a, lw=lw, linestyle=linestyle, label=label, zorder=zorder)
+                ax.plot(self.dataspec[x][i][o][mpo], self.dataspec[y][i][o][mpo], c=c, alpha=a, lw=lw, linestyle=linestyle, label=label, zorder=zorder)
+
         if cbar:
             cb = plt.colorbar(mpl.cm.ScalarMappable(norm=norm, cmap=cmap), ax=ax, label=cbarlabel)
             cb.minorticks_on()
