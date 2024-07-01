@@ -1046,7 +1046,7 @@ class Spectra():
         return
 
 
-    def plot_spectra(self, ax=None, ords=None, lisspec=None, wmin=None, wmax=None, legendlabel=None, legendwhich='first', legendloc=None, xunit='A', xlabel=None, ylabel='Flux', title='', cprop=None, cprop_all=False, cbar=None, cbarlabel=None, cmap=None, lw=1, linestyle0='-', linestyle1='-', alpha0=1, alpha1=0.7, zorder=1):
+    def plot_spectra(self, ax=None, x='w', y='f', ords=None, lisspec=None, wmin=None, wmax=None, legendlabel=None, legendwhich='first', legendloc=None, xunit='A', xlabel=None, ylabel='Flux', title='', cprop=None, cprop_all=False, cbar=None, cbarlabel=None, cmap=None, lw=1, linestyle0='-', linestyle1='-', alpha0=1, alpha1=0.7, zorder=1):
         """
         Plot spectra flux vs wavelength, orders in `ords`.
 
@@ -1054,6 +1054,10 @@ class Spectra():
 
         Parameters
         ----------
+        x : str
+            w, wshift
+        y : str
+            f
         ords : list-like, optional
             List of orders to plot. If `None` (default), all orders are plotted.
         
@@ -1094,9 +1098,9 @@ class Spectra():
         if np.issubdtype(type(ords), np.integer): ords = [ords]  # make sure it is a list
         
         # Wavelength range
-        if wmin is None: wmin = np.nanmin(self.dataspec['w'][lisspec][:,ords])
-        if wmax is None: wmax = np.nanmax(self.dataspec['w'][lisspec][:,ords])
-        mp = (self.dataspec['w'] >= wmin) & (self.dataspec['w'] <= wmax)
+        if wmin is None: wmin = np.nanmin(self.dataspec[x][lisspec][:,ords])
+        if wmax is None: wmax = np.nanmax(self.dataspec[x][lisspec][:,ords])
+        mp = (self.dataspec[x] >= wmin) & (self.dataspec[x] <= wmax)
 
         # Update orders to be plotted (wmin and wmax have preference over input orders in `ords`)
         mp_ords = mp[0].any(axis=1)  # Any order with True (i.e. will be plotted)
@@ -1142,7 +1146,7 @@ class Spectra():
                     label = f'{spec.filname}' if (o == ords[0]) else None
                 elif legendwhich == 'first':
                     label = legendlabel if (o == ords[0]) and (i == 0) else None
-                ax.plot(spec.dataspec['w'][o][mpo], spec.dataspec['f'][o][mpo], c=c, alpha=a, lw=lw, linestyle=linestyle, label=label, zorder=zorder)
+                ax.plot(spec.dataspec[x][o][mpo], spec.dataspec[y][o][mpo], c=c, alpha=a, lw=lw, linestyle=linestyle, label=label, zorder=zorder)
         if cbar:
             cb = plt.colorbar(mpl.cm.ScalarMappable(norm=norm, cmap=cmap), ax=ax, label=cbarlabel)
             cb.minorticks_on()
