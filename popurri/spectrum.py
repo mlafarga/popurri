@@ -638,6 +638,22 @@ class Spectrum():
         return f''
     
 
+    def dopplershift(self, v, rel=True, x='w', xnew='wshift'):
+        """
+        v : float
+            Doppler shift, m/s
+        """
+        C_MS = 2.99792458*1.e8  # Light speed [m/s]
+        if rel: a = np.sqrt((1 + v / C_MS) / (1 - v / C_MS))
+        else: a = (1 - v / C_MS)
+        # xprime = x * a
+        wshift = np.ones_like(self.dataspec[x]) * np.nan
+        for o in self.ords:
+            wshift[o] = self.dataspec[x][o] * a
+        self.dataspec[xnew] = wshift
+        return
+
+
     def plot_spectrum(self, ax=None, ords=None, x='w', y='f', wmin=None, wmax=None, normflux=None, offset=0, legend=False, legendloc=None, xunit='A', xlabel=None, ylabel='Flux', title='', lw=1, linestyle='-', alpha=1, alphaother=0.7, zorder=0, color=None, colorother=None, cmap=None, cbar=False):
         """Plot spectrum flux vs wavelength (or pixel), for the orders in `ords`.
         
@@ -1008,6 +1024,20 @@ class Spectra():
         # vars(self)
         return f''
     
+
+    def dopplershift(self, lisv, rel=True, x='w', xnew='wshift'):
+        C_MS = 2.99792458*1.e8  # Light speed [m/s]
+        for i, k in enumerate(self.dataspec.keys()):
+            spec = self.dataspec[k]
+            v = lisv[k]
+            if rel: a = np.sqrt((1 + v / C_MS) / (1 - v / C_MS))
+            else: a = (1 - v / C_MS)
+            wshift = np.ones_like(spec.dataspec[x]) * np.nan
+            for o in spec.ords:
+                wshift[o] = spec.dataspec[x][o] * a
+            self.dataspec[k].dataspec[xnew] = wshift
+        return
+
 
     def plot_spectra(self, ax=None, ords=None, lisspec=None, wmin=None, wmax=None, legendlabel=None, legendwhich='first', legendloc=None, xunit='A', xlabel=None, ylabel='Flux', title='', cprop=None, cprop_all=False, cbar=None, cbarlabel=None, cmap=None, lw=1, linestyle0='-', linestyle1='-', alpha0=1, alpha1=0.7, zorder=1):
         """
