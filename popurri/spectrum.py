@@ -89,6 +89,7 @@ def read_spec_crires(filin):
     pass
     return
 
+
 # =============================================================================
 
 def read_spec_criresplus(filin):
@@ -186,7 +187,6 @@ def pix2wave_echelle(x, coeff):
     return w
 
 
-
 def read_spec_harps(filin, kwinst='HIERARCH ESO', nord=72, readblaze=True, dirblaze=None, filblaze=None):
     """
     Read e2ds reduced spectrum flux and wavelength, and optionally the blaze.
@@ -257,7 +257,6 @@ def read_spec_harpsn(filin, kwinst='HIERARCH TNG', nord=69, readblaze=True, dirb
 def read_spec_maroonx(filin):
     pass
     return
-
 
 
 # =============================================================================
@@ -553,10 +552,26 @@ class Spectrum():
     """
     Spectrum class
 
-    Data attributes of the `Spectrum` class:
+    Main data attributes of the `Spectrum` class:
     - `dataspec`: Dictionary with spectrum data (wavelength, flux, blaze...).
     - `dataheader`: Dictionary with general parameters from the header.
     - `dataord`: Pandas DataFrame with per order data such as the S/N.
+
+    Other attributes of the `Spectrum` class:
+    - `filin`: Input file.
+    - `filname`: File name without extension nor path.
+    - `inst`: Instrument keyword.
+    - `obj`: Object name.
+    - `tag`: String tag for the spectrum.
+    - `dirout`: Output directory.
+    - `Spectrograph`: `popurri` `Spectrograph` object.
+    - `ords_real`: Real order numbers.
+    - `ord_ref`: Reference order.
+    - `pixel_ms`: Pixel size in velocity [m/s].
+    - `nord`: Number of orders.
+    - `ords`: List of orders (starting with 0 for the bluest order).
+    - `npix`: Number of pixels per order.
+    - `header`: Raw header (`astropy.io.fits.header.Header` object).
     """
 
     def __init__(self, filin, inst, dirout='./', obj=None, tag='', headertable=None, ord_ref=None,
@@ -654,7 +669,10 @@ class Spectrum():
         return
 
 
-    def plot_spectrum(self, ax=None, ords=None, x='w', y='f', wmin=None, wmax=None, normflux=None, offset=0, legend=False, legendloc=None, xunit='A', xlabel=None, ylabel='Flux', title='', lw=1, linestyle='-', alpha=1, alphaother=0.7, zorder=0, color=None, colorother=None, cmap=None, cbar=False):
+
+
+
+    def plot_spectrum(self, ax=None, ords=None, x='w', y='f', wmin=None, wmax=None, normflux=None, offset=0, legendlabel=None, legend=False, legendloc=None, xunit='A', xlabel=None, ylabel='Flux', title='', lw=1, linestyle='-', alpha=1, alphaother=0.7, zorder=0, color=None, colorother=None, cmap=None, cbar=False):
         """Plot spectrum flux vs wavelength (or pixel), for the orders in `ords`.
         
         Parameters
@@ -674,20 +692,24 @@ class Spectrum():
             Plot all orders with the same color, alternating alpha. Overrides `cmap`.
         cmap : str, optional
         cbar : bool, optional
-        TODO add colorbar if using cmap
+        TODO add colorbar if using cmap?
         """
         if ax is None: ax = plt.gca()
         if ords is None: ords = self.ords
         if np.issubdtype(type(ords), np.integer): ords = [ords]  # make sure it is a list
 
         # Wavelength range
+        update_ords = True
+        if (wmin is None) and (wmax is None): update_ords = False
         if wmin is None: wmin = np.nanmin(self.dataspec[x][ords])
         if wmax is None: wmax = np.nanmax(self.dataspec[x][ords])
-        mp = (self.dataspec[x] >= wmin) & (self.dataspec[x] <= wmax)
+        mp = (self.dataspec[x] >= wmin) & (self.dataspec[x] <= wmax)  # pixel mask
 
-        # Update orders to be plotted (wmin and wmax have preference over input orders in `ords`)
-        mp_ords = mp.any(axis=1)  # Any order with True (i.e. will be plotted)
-        ords = self.ords[mp_ords]
+        # Update orders to be plotted
+        # If not None, wmin and wmax have preference over input orders in `ords`, except when x is in pixels, because if not all orders woudl be plotted (because they all the the same pixels)
+        if (x != 'pix') and update_ords:
+            mp_ords = mp.any(axis=1)  # Any order with True (i.e. will be plotted)
+            ords = self.ords[mp_ords]
 
         # Normalisation and offset
         if normflux is not None:
@@ -721,7 +743,11 @@ class Spectrum():
                 c = color if o % 2 == 0 else colorother
                 a = alpha if o % 2 == 0 else alphaother
             
-            ax.plot(self.dataspec[x][o][mpo], yp[o][mpo], c=c, alpha=a, lw=lw, linestyle=linestyle, zorder=zorder, label=f'{o}')
+            # Legend label
+            if legendlabel is None: label = f'{o}'
+            else: label = f'{legendlabel}'
+            
+            ax.plot(self.dataspec[x][o][mpo], yp[o][mpo], c=c, alpha=a, lw=lw, linestyle=linestyle, zorder=zorder, label=label)
         if legend: ax.legend(loc=legendloc)
         if xlabel is None: xlabel = wavelength_label(x=xunit)  # Assumes plotting wavelength in x-axis
         ax.set(xlabel=xlabel, ylabel=ylabel, title=title, xlim=(wmin, wmax))
@@ -742,7 +768,7 @@ class Spectrum():
         return
     
 
-    def plot_spectrum_pix(self, ax=None, ords=None, x='pix', y='f', pmin=None, pmax=None, normflux=np.nanmax, offset=1, legend=False, legendloc=None, xunit=None, xlabel='Pixel', ylabel='Flux', title='', lw=1, linestyle='-', alpha=1, zorder=0, color=None, cmap=None, cbar=False):
+    def plot_spectrum_pix(self, ax=None, ords=None, x='pix', y='f', pmin=None, pmax=None, normflux=np.nanmax, offset=1, legend=False, legendloc=None, xunit=None, xlabel='Pixel', ylabel='Norm. flux + offset', title='', lw=1, linestyle='-', alpha=1, zorder=0, color=None, cmap=None, cbar=False):
         """Plot spectrum normalised flux + offset vs pixel for the orders in `ords`.
         
         Parameters
@@ -773,9 +799,9 @@ class Spectrum():
         if pmax is None: pmax = np.nanmax(self.dataspec[x][ords])
         mp = (self.dataspec[x] >= pmin) & (self.dataspec[x] <= pmax)
 
-        # Update orders to be plotted (wmin and wmax have preference over input orders in `ords`)
-        mp_ords = mp.any(axis=1)  # Any order with True (i.e. will be plotted)
-        ords = self.ords[mp_ords]
+        # # Update orders to be plotted (wmin and wmax have preference over input orders in `ords`)
+        # mp_ords = mp.any(axis=1)  # Any order with True (i.e. will be plotted)
+        # ords = self.ords[mp_ords]
 
         # Normalisation and offset
         if normflux is not None:
@@ -972,6 +998,9 @@ class Spectra():
         # Read files into Spectrum objects
         self.lisspec, self.lisfil = read_spectra(self.lisfil_initial, self.inst, returnclass=True, dirout=dirout, ordcut=ordcut, saveordnoncut=saveordnoncut, headertable=headertable)
 
+        # Number of spectra read
+        self.nobs = len(self.lisspec)
+
         # Get filenames
         self.lisfilname = [spec.filname for spec in self.lisspec]
 
@@ -1043,6 +1072,7 @@ class Spectra():
             # self.dataspec[k].dataspec[xnew] = wshift
             liswshift.append(wshift)
         self.dataspec[xnew] = np.array(liswshift)
+        # TODO add to self.lisspec if deleteindividual is False
         return
 
 
@@ -1098,13 +1128,15 @@ class Spectra():
         if np.issubdtype(type(ords), np.integer): ords = [ords]  # make sure it is a list
         
         # Wavelength range
+        update_ords = True
         if wmin is None: wmin = np.nanmin(self.dataspec[x][lisspec][:,ords])
         if wmax is None: wmax = np.nanmax(self.dataspec[x][lisspec][:,ords])
-        mp = (self.dataspec[x] >= wmin) & (self.dataspec[x] <= wmax)
+        mp = (self.dataspec[x] >= wmin) & (self.dataspec[x] <= wmax)  # pixel mask
 
         # Update orders to be plotted (wmin and wmax have preference over input orders in `ords`)
-        mp_ords = mp[0].any(axis=1)  # Any order with True (i.e. will be plotted)
-        ords = self.ords[mp_ords]
+        if (x != 'pix') and update_ords:
+            mp_ords = mp[0].any(axis=1)  # Any order with True (i.e. will be plotted)
+            ords = self.ords[mp_ords]
 
         # if cprop is not None:
         #     if cmap is None: cmap = 'viridis'
