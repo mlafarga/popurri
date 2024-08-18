@@ -42,9 +42,9 @@ def read_spec_carmvis(filin):
         dataspec['fe'] = hdulist['sig'].data
         dataspec['c'] = hdulist['cont'].data
     # TODO check what is c exactly
-    dataspec['nord'] = len(dataspec['w'])
+    dataspec['nord'] = int(len(dataspec['w']))
     dataspec['ords'] = np.arange(0, dataspec['nord'], 1)
-    dataspec['npix'] = len(dataspec['w'][0])
+    dataspec['npix'] = int(len(dataspec['w'][0]))
     dataspec['pix'] = np.array([np.arange(0, dataspec['npix'], 1)] * len(dataspec['ords']))
     return dataspec
 
@@ -181,7 +181,7 @@ def pix2wave(x, coeff):
 
 
 def pix2wave_echelle(x, coeff):
-    nord = len(coeff)
+    nord = int(len(coeff))
     ords = np.arange(0, nord, 1)
     w = np.array([pix2wave(x, coeff[o]) for o in ords])
     return w
@@ -217,7 +217,7 @@ def read_spec_harps(filin, kwinst='HIERARCH ESO', nord=72, readblaze=True, dirbl
 
     # Wavelength
     # nord = len(dataspec['f'])
-    npix = len(dataspec['f'][0])
+    npix = int(len(dataspec['f'][0]))
     pix = np.arange(0, npix, 1)
     coeff = wpolycoeff(dataspec['header'], kwinst=kwinst, nord=nord)
     dataspec['w'] = pix2wave_echelle(x, coeff)
@@ -233,7 +233,7 @@ def read_spec_harps(filin, kwinst='HIERARCH ESO', nord=72, readblaze=True, dirbl
     else:
         dataspec['b'] = np.ones_like(dataspec['f'])        
 
-    dataspec['nord'] = nord
+    dataspec['nord'] = int(nord)
     dataspec['ords'] = np.arange(0, dataspec['nord'], 1)
     dataspec['npix'] = npix
     dataspec['pix'] = np.array([np.arange(0, dataspec['npix'], 1)] * len(dataspec['ords']))
@@ -614,14 +614,14 @@ class Spectrum():
         # Add "real" orders from Spectrograph object
         self.ords_real = self.Spectrograph.dataord['ord_real'].values
         # Add order reference if ord_ref is None
-        self.ord_ref = self.Spectrograph.ord_ref if ord_ref is None else ord_ref
+        self.ord_ref = int(self.Spectrograph.ord_ref) if ord_ref is None else int(ord_ref)
         # Add pixel size in velocity [m/s]
         self.pixel_ms = self.Spectrograph.pixel_ms
 
         # Add general parameters from `dataspec` attribute (and remove from self.dataspec)
-        self.nord = self.dataspec.pop('nord', None)
+        self.nord = int(self.dataspec.pop('nord', None))
         self.ords = self.dataspec.pop('ords', None)
-        self.npix = self.dataspec.pop('npix', None)
+        self.npix = int(self.dataspec.pop('npix', None))
         self.header = self.dataspec.pop('header', None)
 
         # Add object from header
@@ -1010,12 +1010,12 @@ class Spectra():
             self.dataspec[k] = np.array([spec.dataspec[k] for spec in self.lisspec])
 
         # For general properties shared by all spectra, add only the value from the first spectrum
-        self.nord = self.lisspec[0].nord
+        self.nord = int(self.lisspec[0].nord)
         self.ords = self.lisspec[0].ords
         self.ords_real = self.lisspec[0].ords_real
-        self.ord_ref = self.lisspec[0].ord_ref
+        self.ord_ref = int(self.lisspec[0].ord_ref)
         self.pixel_ms = self.lisspec[0].pixel_ms
-        self.npix = self.lisspec[0].npix
+        self.npix = int(self.lisspec[0].npix)
         if self.obj is None: self.obj = self.lisspec[0].obj
         if self.tag is None: self.tag = self.lisspec[0].tag
 
@@ -1035,12 +1035,13 @@ class Spectra():
                 self.dataord[k].append(d[k])
             self.dataord[k] = pd.DataFrame(self.dataord[k], index=self.lisfilname)
         
-        # Add per order parameters from `dataord` to `dataheader`. Keywords will be '{parameter}o{ord}' where parameter is the column in `dataord` (e.g. 'snr') and ord is the order number.
-        for k in self.dataord.keys():
-            # Update colum names from order number to {k}o{ord}
-            rename_cols = {o: f'{k}o{o}' for o in self.dataord[k].columns}
-            dftemp = self.dataord[k].rename(columns=rename_cols)
-            self.dataheader = pd.concat([self.dataheader, dftemp], axis=1)
+        # # Add per order parameters from `dataord` to `dataheader`. Keywords will be '{parameter}o{ord}' where parameter is the column in `dataord` (e.g. 'snr') and ord is the order number.
+        # # ---> NOTE: This is already done in the Spectrum class, so it is not needed here. If done, it will duplicate columns like the snro ones.
+        # for k in self.dataord.keys():
+        #     # Update colum names from order number to {k}o{ord}
+        #     rename_cols = {o: f'{k}o{o}' for o in self.dataord[k].columns}
+        #     dftemp = self.dataord[k].rename(columns=rename_cols)
+        #     self.dataheader = pd.concat([self.dataheader, dftemp], axis=1)
 
         # Delete individual Spectrum objects to save memory
         if deleteindividual: del self.lisspec
