@@ -1062,12 +1062,19 @@ class Spectra():
 
     def dopplershift(self, lisv, rel=True, x='w', xnew='wshift'):
         C_MS = 2.99792458*1.e8  # Light speed [m/s]
+        # Make sure `lisv` is a list, and set it to same value for all obs
+        if not np.issubdtype(type(lisv), list):
+            lisv = [lisv] * self.nobs
+        # Make sure `lisv` has the same length as the number of obs
+        if len(lisv) != self.nobs:
+            raise ValueError('`lisv` must have the same length as the number of observations')
+        
         liswshift = []
         # for i, k in enumerate(self.dataspec.keys()):
         for i, k in enumerate(self.lisfilname):
             # spec = self.lisspec[i]  # only works is deleteindividual=False
             w = self.dataspec[x][i]
-            v = lisv[k]
+            v = lisv[i]
             if rel: a = np.sqrt((1 + v / C_MS) / (1 - v / C_MS))
             else: a = (1 - v / C_MS)
             # wshift = np.ones_like(spec.dataspec[x]) * np.nan
@@ -1124,7 +1131,7 @@ class Spectra():
             To label (with `legendlabel`) only the first spectrum in the list, or all spectra in the list. Default is 'first'.
         legendlabel : str, optional, default None
             Label for the legend. Can label the first order of a single spectrum in the list, or the first order of all spectra in the list.
-            If only the first spectrum is labelled (with `legendwhich='first'`), the labe should be somethign like 'Observations' or 'Spectra'.
+            If only the first spectrum is labelled (with `legendwhich='first'`), the label should be somethign like 'Observations' or 'Spectra'.
             If all spectra are labelled, the label will be the name of each spectra.
         """
         if ax is None: ax = plt.gca()
