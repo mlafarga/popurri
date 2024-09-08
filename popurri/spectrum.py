@@ -1029,6 +1029,16 @@ class Spectra():
         # Add numeric index to dataheader (from 0 to nobs-1)
         self.dataheader['idx'] = np.arange(0, self.nobs, 1)
 
+        # Get minimum, maximum, and absolute maximum BERV of all observations
+        self.bervminobs = self.dataheader['berv'].min()
+        self.bervmaxobs = self.dataheader['berv'].max()
+        self.bervabsmaxobs = self.dataheader['berv'].abs().max()
+
+        # Get maximum BERV of star
+        # TODO
+        # Set in HARPS header, but would need to compute for other instruments
+        self.bervabsobj = None
+
         # Get per order parameters in `dataord` attribute
         # dataord is a dictionary with a pandas dataframe for each propety, e.g. dataord['snr'] is a pandas dataframe with the S/N of all orders (columns) for all spectra (index). Can shift orders and spectra with `dataord['snr'].T`.
         lisdataord = [sp.dataord for sp in self.lisspec]
