@@ -1029,7 +1029,6 @@ class Spectra():
         # Add numeric index to dataheader (from 0 to nobs-1)
         self.dataheader['idx'] = np.arange(0, self.nobs, 1)
 
-
         # Get per order parameters in `dataord` attribute
         # dataord is a dictionary with a pandas dataframe for each propety, e.g. dataord['snr'] is a pandas dataframe with the S/N of all orders (columns) for all spectra (index). Can shift orders and spectra with `dataord['snr'].T`.
         lisdataord = [sp.dataord for sp in self.lisspec]
@@ -1047,6 +1046,9 @@ class Spectra():
         #     rename_cols = {o: f'{k}o{o}' for o in self.dataord[k].columns}
         #     dftemp = self.dataord[k].rename(columns=rename_cols)
         #     self.dataheader = pd.concat([self.dataheader, dftemp], axis=1)
+
+        # Add the `Spectrograph` object of the first spectrum
+        self.Spectrograph = self.lisspec[0].Spectrograph
 
         # Delete individual Spectrum objects to save memory
         if deleteindividual: del self.lisspec
