@@ -1021,9 +1021,14 @@ class Spectra():
 
         # Get parameters from header in `dataheader` attribute
         # Transform list of dictionaries into pandas dataframe
+        # Note: dataheader is a pandas DataFrame here in Spectra, but a dictionary in Spectrum (the contents of lisspec here)
         lisdataheader = [sp.dataheader for sp in self.lisspec]
         self.dataheader = pd.DataFrame(lisdataheader, index=self.lisfilname)
         del lisdataheader
+
+        # Add numeric index to dataheader (from 0 to nobs-1)
+        self.dataheader['idx'] = np.arange(0, self.nobs, 1)
+
 
         # Get per order parameters in `dataord` attribute
         # dataord is a dictionary with a pandas dataframe for each propety, e.g. dataord['snr'] is a pandas dataframe with the S/N of all orders (columns) for all spectra (index). Can shift orders and spectra with `dataord['snr'].T`.
