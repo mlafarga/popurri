@@ -528,8 +528,12 @@ def join_overlap_wlimits_once(w1, w2):
     """
     w1new, w2new = [], []
     iused = -1
-    for i in range(len(w1)-1):  # for each telluric region
+    for i in range(len(w1)):  # for each telluric region
         if i == iused:
+            continue
+        if i == len(w1)-1:  # last line
+            w1new.append(w1[i])
+            w2new.append(w2[i])
             continue
         w1new.append(w1[i])
         if w2[i] >= w1[i+1]:  # Join lines
@@ -651,9 +655,9 @@ class Mask():
     """
     Telluric mask class.
 
-    Can create from data in file `filin`, or from data already loaded with `w` and `f`. If both `filin` and `w` and `f` are given, `filin` has preference and is the on that will be used.
+    Can create from data in file `filin`, or from data already loaded with `w` and `f`. If both `filin` and `w` and `f` are given, `filin` has preference and is the one that will be used.
     """
-    def __init__(self, filin=None, w=None, f=None, dirout='./', diroutplot='./', tag='', join_overlap=True, broaden_dv=None):
+    def __init__(self, filin=None, w=None, f=None, dirout='./', diroutplot='./', tag='', join_overlap=True, broaden_dv=None, verbose=True):
         self.filin = filin
         self.dirout = dirout
         self.diroutplot = diroutplot
@@ -671,20 +675,47 @@ class Mask():
             if (w is None) or (f is None):
                 raise ValueError('If filin is None, w and f must be given.')
             self.w, self.f = w, f
+        
+        # # Save original data
+        # self.worig, self.forig = self.w.copy(), self.f.copy()
 
-        # Broaden telluric lines
-        if self.broaden_dv is not None:
-            self.w = broaden_mask(self.w, self.f, self.broaden_dv)
+        # Add 1 point with flux 0 at the beginning and end of the mask
+        # to make sure that all lines are "complete"
+        dw = 0.001
+        self.w = np.concatenate(([self.w[0]-dw], self.w, [self.w[-1]+dw]))
+        self.f = np.concatenate(([0], self.f, [0]))
+
+        # # Broaden telluric lines
+        # if self.broaden_dv is not None:
+        #     print('Broadening mask...')
+        #     self.w = broaden_mask(self.w, self.f, self.broaden_dv)
 
         # Get wavelength limits of the lines in the mask
+        # self.worig1, self.worig2 = mask2wlimits(self.worig, self.forig)
         self.w1, self.w2 = mask2wlimits(self.w, self.f)
+
+        # Broaden mask limits (faster than broadening w)
+        if self.broaden_dv is not None:
+            if self.verbose: print(f'Broaden mask by {self.broaden_dv:.3f} m/s')
+            self.w1, self.w2 = broaden_wlimits(self.w1, self.w2, self.broaden_dv)
 
         # Join lines that overlap
         if self.join_overlap:
+            if self.verbose: print('Join overlap between lines')
+            # self.worig1, self.worig2 = join_overlap_wlimits(self.worig1, self.worig2)
             self.w1, self.w2 = join_overlap_wlimits(self.w1, self.w2)
 
+        # Update w and f after join overlap
+        # if self.verbose: print('Update after overlap')
+        self.w, self.f = wlimits2mask(self.w1, self.w2, dw=0.001)
+
         # Make mask to be used with data
+        # self.Maskorig, _ = interp_mask_inverse(self.worig, self.forig, kind='linear')
         self.Mask, _ = interp_mask_inverse(self.w, self.f, kind='linear')
+
+
+    def broaden_mask(self):
+        self.w = broaden_mask(self.w, self.f, self.broaden_dv)
 
 
     def plot_mask(self, ax=None, fscale=1, zorder=-1, xunit='A', xlabel=None, ylabel='Flux', leglabel='', title='', color='0.5', alpha=0.6, **kwargs):
@@ -695,6 +726,7 @@ class Mask():
         ax.fill_between(self.w, self.f*fscale, zorder=zorder, color=color, alpha=alpha, label=leglabel, **kwargs)
         if xlabel is None: xlabel = wavelength_label(x=xunit)  # Assumes plotting wavelength in x-axis
         ax.set(xlabel=xlabel, ylabel=ylabel, title=title)
+        ax.minorticks_on()
         return ax
 
 
