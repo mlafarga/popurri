@@ -663,6 +663,7 @@ class Mask():
         self.diroutplot = diroutplot
         for dout in [self.dirout, self.diroutplot]:
             if not os.path.exists(dout): os.makedirs(dout)
+        self.verbose = verbose
         self.tag = tag
         self.utag = '_' + tag  # tag with underscore for file names
         self.join_overlap = join_overlap
